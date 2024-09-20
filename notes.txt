@@ -1,0 +1,2 @@
+https://www.youtube.com/watch?v=buXa1xXWU_U - 15:30 - 20:45 on how to use SysId to calculate FF and PID values
+https://v6.docs.ctr-electronics.com/en/stable/docs/api-reference/api-usage/signal-logging.html
