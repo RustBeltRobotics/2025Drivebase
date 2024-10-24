@@ -29,6 +29,8 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
 
+  // TODO: utilize design ideas in this post:  https://www.chiefdelphi.com/t/command-based-best-practices-for-2025-community-feedback/465602/143
+
   private final XboxController driverController = new XboxController(0);
   private final XboxController operatorController = new XboxController(1);
   private final Drivetrain drivetrain = new Drivetrain();
@@ -38,7 +40,7 @@ public class RobotContainer {
   private final SendableChooser<Integer> startingPosisitonChooser = new SendableChooser<>();
 
   // Limits maximum speed
-  private double maxSpeedFactor = 1;
+  private double maxSpeedFactor = 1.0;
 
   /** The container for the robot. Contains subsystems, IO devices, and commands. */
   public RobotContainer() {
@@ -85,8 +87,8 @@ public class RobotContainer {
 
   private void setDefaultCommands() {
     drivetrain.setDefaultCommand(new FieldOrientedDriveCommand(drivetrain,
-      () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.05) * Constants.Kinematics.MAX_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
-      () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.05) * Constants.Kinematics.MAX_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
+      () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
+      () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
       () -> -Utilities.modifyAxisGeneric(driverController.getRightX(), 1.0, 0.05) * Constants.Kinematics.MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND * maxSpeedFactor
       )
     );
@@ -111,8 +113,8 @@ public class RobotContainer {
     Constants.Shuffleboard.COMPETITION_TAB.add("where am I?", startingPosisitonChooser).withPosition(2, 0);
   }
 
-  public void setRumbleState(boolean runble) {
-    if (runble) {
+  public void setRumbleState(boolean rumble) {
+    if (rumble) {
       driverController.setRumble(RumbleType.kLeftRumble, .5);
       driverController.setRumble(RumbleType.kRightRumble, .5);
       operatorController.setRumble(RumbleType.kLeftRumble, .5);

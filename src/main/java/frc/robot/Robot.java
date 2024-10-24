@@ -9,7 +9,6 @@ import java.util.Map;
 import org.littletonrobotics.urcl.URCL;
 
 import com.ctre.phoenix6.SignalLogger;
-
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -95,10 +94,6 @@ public class Robot extends TimedRobot {
 
     // Stop the ontrollers from vibrating all the time
     robotContainer.setRumbleState(false);
-
-    if (Constants.Vision.VISION_ENABLED) {
-      //TODO: force initial pose for Drivetrain's SwerveDrivePoseEstimator using Vision.getRobotPoseEstimation() ?
-    }
   }
 
   /** This function is called periodically during autonomous. */

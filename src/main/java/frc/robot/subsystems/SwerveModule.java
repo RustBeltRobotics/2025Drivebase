@@ -29,6 +29,9 @@ public class SwerveModule extends SubsystemBase {
     public static final double DRIVE_F = 0.22;
 
     // Steer PID Constants
+    // For how to tune these values, see: https://www.chiefdelphi.com/t/official-sds-mk3-mk4-code/397109/17
+    //TODO: test with these values as well
+    //  https://github.com/SwerveDriveSpecialties/Do-not-use-swerve-lib-2022-unmaintained/blob/develop/src/main/java/com/swervedrivespecialties/swervelib/Mk4iSwerveModuleHelper.java#L40
     public static final double STEER_P = 0.01;
     public static final double STEER_I = 0.0;
     public static final double STEER_D = 0.0;
@@ -110,6 +113,10 @@ public class SwerveModule extends SubsystemBase {
         steerPidController.setIZone(0.0);
         steerPidController.setFF(STEER_F);
         steerPidController.setOutputRange(-1.0, 1.0);
+        // Enable PID wrap around for the turning motor. This will allow the PID
+        // controller to go through 0 to get to the setpoint i.e. going from 350 degrees
+        // to 10 degrees will go through 0 rather than the other direction which is a
+        // longer route.
         steerPidController.setPositionPIDWrappingEnabled(true);
         steerPidController.setPositionPIDWrappingMaxInput(360.0);
         steerPidController.setPositionPIDWrappingMinInput(0.0);

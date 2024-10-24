@@ -63,8 +63,8 @@ public class Drivetrain extends SubsystemBase {
     // velocity
     private ChassisSpeeds chassisSpeeds = new ChassisSpeeds(0.0, 0.0, 0.0);
 
-    // Boolean statement to control locking the wheels in an X-position
-    private boolean wheelsLocked = false;
+    private boolean wheelsLockedX = false; // Boolean statement to control locking the wheels in an X-position
+    private boolean wheelsLockedSysId = false; // Boolean statement to control locking the wheels at 0 degrees for SysId characterization of drive motors
 
     private final SwerveDrivePoseEstimator poseEstimator;
 
@@ -86,7 +86,7 @@ public class Drivetrain extends SubsystemBase {
     //https://docs.wpilib.org/en/stable/docs/software/networktables/networktables-intro.html#networktables-organization
     // networktables publisher for advantagescope swerve visualization
     StructArrayPublisher<SwerveModuleState> swerveStatePublisher = NetworkTableInstance.getDefault()
-            .getStructArrayTopic("/RBR/SwerveStates", SwerveModuleState.struct).publish();;
+            .getStructArrayTopic("/RBR/SwerveStates", SwerveModuleState.struct).publish();
     // networktables publisher for advantagescope 2d pose visualization
     StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault()
             .getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
@@ -102,7 +102,7 @@ public class Drivetrain extends SubsystemBase {
                                                  // Constants class
                         new PIDConstants(Constants.PathPlanner.translation_P, Constants.PathPlanner.translation_I, Constants.PathPlanner.translation_D), // Translation PID constants
                         new PIDConstants(Constants.PathPlanner.rotation_P, Constants.PathPlanner.rotation_I, Constants.PathPlanner.rotation_D), // Rotation PID constants
-                        Constants.Kinematics.MAX_VELOCITY_METERS_PER_SECOND, // Max module speed, in m/s
+                        Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND, // Max module speed, in m/s
                         Constants.Kinematics.DRIVETRAIN_BASE_RADIUS, // Drive base radius in meters. Distance from robot center to
                                                           // furthest module.
                         new ReplanningConfig()),
@@ -173,11 +173,11 @@ public class Drivetrain extends SubsystemBase {
     }
 
     /**
-     * Toggles whether or not the wheels are locked. If they are, the wheels are
+     * Toggles whether or not the wheels are locked in X patterb. If they are, the wheels are
      * crossed into an X pattern and any other drive input has no effect.
      */
-    public void toggleWheelsLocked() {
-        wheelsLocked = !wheelsLocked;
+    public void toggleWheelsLockedX() {
+        wheelsLockedX = !wheelsLockedX;
     }
 
     public double getGyroscopeAngle() {
@@ -208,6 +208,14 @@ public class Drivetrain extends SubsystemBase {
 
     public void resetPose(Pose2d pose) {
         poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), pose);
+        //TODO: log this pose
+        if (Constants.Vision.VISION_ENABLED) {
+            //This will force initial robot pose using vision system - overriding the initial pose set by PathPlanner auto
+            visionSystem.getRobotPoseEstimation().stream().findFirst().ifPresent(visionPoseEstimate -> {
+                poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), visionPoseEstimate.estimatedPose.toPose2d());
+                //TODO: log this pose
+            });
+        }
     }
 
     public Rotation2d getPoseRotation() {
@@ -239,7 +247,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     public void setModuleStates(SwerveModuleState[] states) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Kinematics.MAX_VELOCITY_METERS_PER_SECOND);
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND);
         frontLeftModule.setState(states[0]);
         frontRightModule.setState(states[1]);
         backLeftModule.setState(states[2]);
@@ -273,7 +281,7 @@ public class Drivetrain extends SubsystemBase {
     @Override
     public void periodic() {
         handleMoves();
-        handleLocked();
+        handleLockedStates();
         updateOdometry();
         updateTelemetry();
         //TODO: MJR - consider adding collision detection, eg. https://gist.githubusercontent.com/kauailabs/8c152fa14937b9cdf137/raw/900c99b23a1940e121ed1ae1abd589eb4050b5c1/CollisionDetection.java
@@ -297,23 +305,25 @@ public class Drivetrain extends SubsystemBase {
         }
     }
 
-    private void handleLocked() {
-        if (!wheelsLocked) {
+    private void handleLockedStates() {
+        if (!wheelsLockedX && !wheelsLockedSysId) {
             // If we are not in wheel's locked mode, set the states normally
-            frontLeftModule.setState(states[0]);
-            frontRightModule.setState(states[1]);
-            backLeftModule.setState(states[2]);
-            backRightModule.setState(states[3]);
-        } else {
-            // If we are in wheel's locked mode, set the drive velocity to 0 so there is no
+            setModuleStates(states);
+        } else if (wheelsLockedX) {
+            // If we are in wheel's locked to X pattern mode, set the drive velocity to 0 so there is no
             // movment, and command the steer angle to either plus or minus 45 degrees to
             // form an X pattern.
+            // See https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html#rotation-conventions for angle conventions
             frontLeftModule.lockModule(45);
             frontRightModule.lockModule(-45);
             backLeftModule.lockModule(-45);
             backRightModule.lockModule(45);
+        } else if (wheelsLockedSysId) {
+            frontLeftModule.lockModule(0);
+            frontRightModule.lockModule(0);
+            backLeftModule.lockModule(0);
+            backRightModule.lockModule(0);
         }
-        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Kinematics.MAX_VELOCITY_METERS_PER_SECOND);
     }
 
     private void updateTelemetry() {
@@ -329,6 +339,7 @@ public class Drivetrain extends SubsystemBase {
         // Advantage scope things
         posePublisher.set(poseEstimator.getEstimatedPosition());
 
+        //TODO: publish both setpoint and actual states to network tables
         swerveStatePublisher.set(new SwerveModuleState[] {
                 states[0],
                 states[1],
@@ -340,4 +351,9 @@ public class Drivetrain extends SubsystemBase {
     public void setVisionSystem(VisionSystem visionSystem) {
         this.visionSystem = visionSystem;
     }
+
+    public void setWheelsLockedSysId(boolean wheelsLockedSysId) {
+        this.wheelsLockedSysId = wheelsLockedSysId;
+    }
+    
 }

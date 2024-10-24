@@ -20,6 +20,8 @@ public final class Main {
    * <p>If you change your main robot class, change the parameter type.
    */
   public static void main(String... args) {
+    //Note: to run SysId characterization, comment out the following line and uncomment the next line
     RobotBase.startRobot(Robot::new);
+    // RobotBase.startRobot(SysIdRoutineRobot::new);
   }
 }

@@ -26,23 +26,30 @@ import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
  */
 public final class Constants {
 
+  public static class BasicUnits {
+    public static final double SECONDS_PER_MINUTE = 60.0;
+    public static final double DEGREES_PER_REVOLUTION = 360.0;
+  }
+
   /**
    * CAN bus IDs
    */
   public static class CanID {
-    //Swerve drive modules
-    public static final int SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR = 21;
-    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_MOTOR = 20;
-    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_ENCODER = 1;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR = 11;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_MOTOR = 10;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_ENCODER = 2;
-    public static final int SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR = 16;
-    public static final int SWERVE_MODULE_BACK_LEFT_STEER_MOTOR = 17;
-    public static final int SWERVE_MODULE_BACK_LEFT_STEER_ENCODER = 4;
-    public static final int SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR = 14;
-    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_MOTOR = 15;
-    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_ENCODER = 3;
+    //Power
+    public static final int POWER_DISTRIBUTION = 1;
+    //Swerve drive modules - clockwise starting with front left (battery side is front of robot)
+    public static final int SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR = 7;
+    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_MOTOR = 6;
+    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_ENCODER = 2;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR = 9;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_MOTOR = 8;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_ENCODER = 3;
+    public static final int SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR = 11;
+    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_MOTOR = 10;
+    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_ENCODER = 4;
+    public static final int SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR = 13;
+    public static final int SWERVE_MODULE_BACK_LEFT_STEER_MOTOR = 12;
+    public static final int SWERVE_MODULE_BACK_LEFT_STEER_ENCODER = 5;
   }
 
   /**
@@ -66,87 +73,89 @@ public final class Constants {
    * Robot physical constraints (max velocity, max angular velocity, SwerveDriveKinematics, etc.)
    */
   public static class Kinematics {
-    /* Robot mass in Lbs. */
-    public static final double MASS = Units.lbsToKilograms(145.0); 
 
-    //TODO: MJR verify these measurements
+    public static final double NEO_REVOLUTION_PER_MINUTE = 5676.0;
 
-    /* Robot width in Inches */
-    public static final double WIDTH = Units.inchesToMeters(24.0);
+    /* Robot mass in Kg. */
+    public static final double MASS = Units.lbsToKilograms(145.0); //TODO: update
 
-    /* Robot width in Inches WITH bumpers on */
-    public static final double WIDTH_WITH_BUMPERS = Units.inchesToMeters(24.0);
+    /* Robot frame width in meters */
+    public static final double WIDTH = Units.inchesToMeters(28.125);
 
-    /* Robot length in Inches */
-    public static final double LENGTH = Units.inchesToMeters(29.5);
+    /* Robot width in meters WITH bumpers on */
+    public static final double WIDTH_WITH_BUMPERS = Units.inchesToMeters(24.0); //TODO: update
 
-    /* Robot length in Inches WITH bumpers on */
-    public static final double LENGTH_WITH_BUMPERS = Units.inchesToMeters(29.5);
+    /* Robot frame length in meters */
+    public static final double LENGTH = Units.inchesToMeters(28.125);
+
+    /* Robot length in meters WITH bumpers on */
+    public static final double LENGTH_WITH_BUMPERS = Units.inchesToMeters(29.5); //TODO: update
+
+    /* Robot wheel diameter in meters */
+    public static final double WHEEL_DIAMETER = Units.inchesToMeters(4.0);
+
+    /* Robot wheel circumference in meters */
+    public static final double WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * Math.PI;
+
+    /* Robot wheel radius in meters */
+    public static final double WHEEL_RADIUS = WHEEL_DIAMETER / 2.0;
+    
 
     /**
      * The left-to-right distance between the drivetrain wheels
      * <p>
      * Should be measured from center to center
      */
-    public static final double DRIVETRAIN_TRACKWIDTH_METERS = 0.4445;
+    public static final double DRIVETRAIN_TRACKWIDTH_METERS = Units.inchesToMeters(22.875);
 
     /**
      * The front-to-back distance between the drivetrain wheels
      * <p>
      * Should be measured from center to center
      */
-    public static final double DRIVETRAIN_WHEELBASE_METERS = 0.4445;
+    public static final double DRIVETRAIN_WHEELBASE_METERS = Units.inchesToMeters(22.875);
 
-    //TODO: MJR - is this calc wrong?  Should it instead be  Math.sqrt(DRIVETRAIN_TRACKWIDTH_METERS * DRIVETRAIN_TRACKWIDTH_METERS * 2) ??
-    // confirm/compare with empirical measurement from center of robot to center of wheel
-    public static final double DRIVETRAIN_BASE_RADIUS = Math.hypot(DRIVETRAIN_TRACKWIDTH_METERS, DRIVETRAIN_WHEELBASE_METERS) / 2.;
+    /** Distance from center of robot to center of swerve module  **/
+    public static final double DRIVETRAIN_BASE_RADIUS = Math.hypot(DRIVETRAIN_TRACKWIDTH_METERS, DRIVETRAIN_WHEELBASE_METERS) / 2.0;
 
     //SDS Mk4 L3 gear ratios - equivalent to 6.12:1 overall ratio
-    public static final double DRIVE_GEAR_RATIO = (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0); //Note: (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0) == 1.0/6.12
+    public static final double DRIVE_GEAR_RATIO = (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0); //Note: (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0) == 1.0/6.12 = 0.1634
+
+    public static final double STEER_GEAR_RATIO = 1.0 / 12.8; //12.8:1 gear ratio
 
     /** Conversion between motor rotations and drive meters */
-    public static final double DRIVE_POSITION_CONVERSION = Math.PI * Units.inchesToMeters(4.0) * DRIVE_GEAR_RATIO;  
+    public static final double DRIVE_POSITION_CONVERSION = WHEEL_CIRCUMFERENCE * DRIVE_GEAR_RATIO;
         
     /** Conversion between motor rotations per minute and drive meters per seconds */
-    public static final double DRIVE_VELOCITY_CONVERSION = DRIVE_POSITION_CONVERSION / 60.;
+    public static final double DRIVE_VELOCITY_CONVERSION = DRIVE_POSITION_CONVERSION / BasicUnits.SECONDS_PER_MINUTE;
 
     /** Conversion between motor rotations and steer degrees */
-    public static final double STEER_POSITION_CONVERSION = 360. * (1. / 12.8); // 12.8:1 gear ratio
+    public static final double STEER_POSITION_CONVERSION = BasicUnits.DEGREES_PER_REVOLUTION * STEER_GEAR_RATIO;
 
     /** Conversion between motor rotations per minute and steer degrees per seconds */
-    public static final double STEER_VELOCITY_CONVERSION = STEER_POSITION_CONVERSION / 60.;
+    public static final double STEER_VELOCITY_CONVERSION = STEER_POSITION_CONVERSION / BasicUnits.SECONDS_PER_MINUTE;
 
     /**
-     * The maximum linear velocity of the robot in meters per second. This is a
-     * measure of how fast the robot can move linearly. Calculated using the
-     * emprical free speed velocity of a NEO. (5676 RPM)
+     * The maximum linear velocity of a swerve module in meters per second. Calculate using https://www.reca.lc/drive
      */
-    public static final double MAX_VELOCITY_METERS_PER_SECOND = 4.089;
+    public static final double MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND = 4.53;  //TODO: compare to empirical measurement
 
     /**
      * The maximum angular velocity of the robot in radians per second. This is a
      * measure of how fast the robot can rotate in place.
+     * 4.53 M/Sec / 0.41 M = 11.0488 Rad / Sec = 633.05 degrees / sec
      */
-    public static final double MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND = MAX_VELOCITY_METERS_PER_SECOND
-            / Math.hypot(DRIVETRAIN_TRACKWIDTH_METERS / 2., DRIVETRAIN_WHEELBASE_METERS / 2.);
-
-    /** Max velocity while following a trajectory. Meters per second */
-    public static final double MAX_TRAJECTORY_VELOCITY = 3.;
-
-    /**
-     * Max acceleration while following a trajectory. Meters per second per second
-     */
-    public static final double MAX_TRAJECTORY_ACCELERATION = 2.;
+    public static final double MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND = MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND / DRIVETRAIN_BASE_RADIUS; //TODO: compare to empirical measurement (calc in comment seems high)
 
     /**
      * Used  to convert desired chassis velocity into individual swerve smodule states
      * See https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html#robot-drive-kinematics
      */
     public static final SwerveDriveKinematics SWERVE_KINEMATICS = new SwerveDriveKinematics(
-            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2., DRIVETRAIN_WHEELBASE_METERS / 2.),
-            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2., -DRIVETRAIN_WHEELBASE_METERS / 2.),
-            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2., DRIVETRAIN_WHEELBASE_METERS / 2.),
-            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2., -DRIVETRAIN_WHEELBASE_METERS / 2.));
+            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),
+            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0),
+            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),
+            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0));
   }
 
   public static class PathPlanner {
@@ -164,10 +173,10 @@ public final class Constants {
     public static final String ARDUCAM_MODEL = "OV9281";
     public static final double POSE_AMBIGUITY_CUTOFF = 0.05;  //TODO: test and adjust this value if necessary (photon docs suggest using 0.2)
     public static final double POSE_AMBIGUITY_SHIFTER = 0.2;
-    public static final double POSE_AMBIGUITY_MULTIPLIER = 4;
+    public static final double POSE_AMBIGUITY_MULTIPLIER = 4.0;
     public static final double NOISY_DISTANCE_METERS = 2.5;  //distance beyond which vision measurements are noisy
     public static final double DISTANCE_CUTOFF = 4.0;  //Tag readings beyond this distance (in meters) will be considered invalid
-    public static final double DISTANCE_WEIGHT = 7;
+    public static final double DISTANCE_WEIGHT = 7.0;
     public static final int TAG_PRESENCE_WEIGHT = 10;
 
     /**

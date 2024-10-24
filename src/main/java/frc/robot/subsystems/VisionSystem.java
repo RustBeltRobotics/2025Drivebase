@@ -75,6 +75,11 @@ public class VisionSystem {
         poseEstimators.add(new PhotonPoseEstimator(fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera4, Constants.Vision.CameraPose.CAMERA_4));
     }
  
+    /**
+     * Get position estimates of robot based on vision data (April Tag readings)
+     * 
+     * @return List of EstimatedRobotPose - one per camera
+     */
     public List<EstimatedRobotPose> getRobotPoseEstimation() {
         List<EstimatedRobotPose> acceptedPoses = new ArrayList<>(poseEstimators.size());
         List<EstimatedRobotPose> rejectedPoses = new ArrayList<>(poseEstimators.size());
@@ -88,6 +93,7 @@ public class VisionSystem {
             List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
             List<Pose3d> rejectedAprilTagsForCamera = new ArrayList<>();
 
+            //https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/multitag.html#enabling-multitag
             if (pipelineResult.getMultiTagResult().estimatedPose.isPresent) {
                 Transform3d fieldToCamera = pipelineResult.getMultiTagResult().estimatedPose.best;
                 //TODO: compare this with the EstimatedRobotPose result from below
@@ -129,7 +135,7 @@ public class VisionSystem {
 
                 if (!usedAprilTagsForCamera.isEmpty()) {
                     // Do not use pose if robot pose is off the field 
-                    // TODO: comparze Z values if we care about them in 2025 game
+                    // TODO: compare Z values if we care about them in 2025 game
                     if (estimatedPose.getX() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
                         || estimatedPose.getX() > Constants.Game.FIELD_LENGTH_METERS + Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
                         || estimatedPose.getY() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
