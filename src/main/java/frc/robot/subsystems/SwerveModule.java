@@ -183,7 +183,7 @@ public class SwerveModule extends SubsystemBase {
         // https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html#module-angle-optimization
         state = SwerveModuleState.optimize(state, currentAngle);
         // https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html#cosine-compensation
-        state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
+        // state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
         drivePidController.setReference(state.speedMetersPerSecond, CANSparkMax.ControlType.kVelocity);
         setSteerAngle(state.angle.getDegrees());
     }

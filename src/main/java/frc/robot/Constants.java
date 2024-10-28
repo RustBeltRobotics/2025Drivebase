@@ -43,18 +43,30 @@ public final class Constants {
     //Power
     public static final int POWER_DISTRIBUTION = 1;
     //Swerve drive modules - clockwise starting with front left (battery side is front of robot)
-    public static final int SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR = 7;
-    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_MOTOR = 6;
-    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_ENCODER = 2;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR = 9;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_MOTOR = 8;
-    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_ENCODER = 3;
-    public static final int SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR = 11;
-    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_MOTOR = 10;
-    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_ENCODER = 4;
-    public static final int SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR = 13;
-    public static final int SWERVE_MODULE_BACK_LEFT_STEER_MOTOR = 12;
-    public static final int SWERVE_MODULE_BACK_LEFT_STEER_ENCODER = 5;
+    // public static final int SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR = 7;
+    // public static final int SWERVE_MODULE_FRONT_LEFT_STEER_MOTOR = 6;
+    // public static final int SWERVE_MODULE_FRONT_LEFT_STEER_ENCODER = 2;
+    // public static final int SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR = 9;
+    // public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_MOTOR = 8;
+    // public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_ENCODER = 3;
+    // public static final int SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR = 11;
+    // public static final int SWERVE_MODULE_BACK_RIGHT_STEER_MOTOR = 10;
+    // public static final int SWERVE_MODULE_BACK_RIGHT_STEER_ENCODER = 4;
+    // public static final int SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR = 13;
+    // public static final int SWERVE_MODULE_BACK_LEFT_STEER_MOTOR = 12;
+    // public static final int SWERVE_MODULE_BACK_LEFT_STEER_ENCODER = 5;
+    public static final int SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR = 11;
+    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_MOTOR = 10;
+    public static final int SWERVE_MODULE_FRONT_LEFT_STEER_ENCODER = 4;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR = 13;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_MOTOR = 12;
+    public static final int SWERVE_MODULE_FRONT_RIGHT_STEER_ENCODER = 5;
+    public static final int SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR = 7;
+    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_MOTOR = 6;
+    public static final int SWERVE_MODULE_BACK_RIGHT_STEER_ENCODER = 2;
+    public static final int SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR = 9;
+    public static final int SWERVE_MODULE_BACK_LEFT_STEER_MOTOR = 8;
+    public static final int SWERVE_MODULE_BACK_LEFT_STEER_ENCODER = 3;
   }
 
   /**
@@ -126,7 +138,7 @@ public final class Constants {
     //SDS Mk4 L3 gear ratios - equivalent to 6.12:1 overall ratio
     public static final double DRIVE_GEAR_RATIO = (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0); //Note: (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0) == 1.0/6.12 = 0.1634
 
-    public static final double STEER_GEAR_RATIO = 1.0 / 12.8; //12.8:1 gear ratio
+    public static final double STEER_GEAR_RATIO = 1.0 / (150.0 / 7.0); //150/7:1 gear ratio
 
     /** Conversion between motor rotations and drive meters */
     public static final double DRIVE_POSITION_CONVERSION = WHEEL_CIRCUMFERENCE * DRIVE_GEAR_RATIO;

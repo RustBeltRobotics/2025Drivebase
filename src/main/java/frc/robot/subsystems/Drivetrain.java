@@ -89,9 +89,9 @@ public class Drivetrain extends SubsystemBase {
     // networktables publisher for advantagescope 2d pose visualization
     StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault().getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
     // networktables publisher for advantagescope chassis speed visualization
-    StructPublisher<ChassisSpeeds> chassisSpeedPublisherMeasured = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Measured", ChassisSpeeds.struct).publish();
+    // StructPublisher<ChassisSpeeds> chassisSpeedPublisherMeasured = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Measured", ChassisSpeeds.struct).publish();
     //Navx velicity data is too inaccurate to make this useful
-    //StructPublisher<ChassisSpeeds> chassisSpeedPublisherSetpoint = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Setpoint", ChassisSpeeds.struct).publish();
+    StructPublisher<ChassisSpeeds> chassisSpeedPublisherSetpoint = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Setpoint", ChassisSpeeds.struct).publish();
 
     public Drivetrain() {
         // Configure AutoBuilder last
@@ -182,7 +182,8 @@ public class Drivetrain extends SubsystemBase {
 
     public double getGyroscopeAngle() {
         //Note: we need to flip the sign since navx reports clockwise as positive, where wpilib/FRC coordinate system is counter-clockwise as positive
-        return -navx.getYaw(); // -180 to 180, 0 degres is forward, ccw is +
+        var rawYaw = navx.getYaw();
+        return -(rawYaw); // -180 to 180, 0 degres is forward, ccw is +
     }
 
     // Returns the measurment of the gyroscope yaw. Used for field-relative drive
@@ -210,7 +211,7 @@ public class Drivetrain extends SubsystemBase {
     public void resetPose(Pose2d pose) {
         poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), pose);
         //TODO: log this pose
-        if (Constants.Vision.VISION_ENABLED) {
+        if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
             //This will force initial robot pose using vision system - overriding the initial pose set by PathPlanner auto
             visionSystem.getRobotPoseEstimation().stream().findFirst().ifPresent(visionPoseEstimate -> {
                 poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), visionPoseEstimate.estimatedPose.toPose2d());
@@ -227,7 +228,7 @@ public class Drivetrain extends SubsystemBase {
         // Update odometry from swerve states
         poseEstimator.update(getGyroscopeRotation(), getSwerveModulePositions());
 
-        if (Constants.Vision.VISION_ENABLED) {
+        if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
             List<EstimatedRobotPose> visionPoseEstimates = visionSystem.getRobotPoseEstimation();
             for (EstimatedRobotPose visionPoseEstimate : visionPoseEstimates) {
                 //TODO: define this method / test and/or use a constant here for the standard deviation

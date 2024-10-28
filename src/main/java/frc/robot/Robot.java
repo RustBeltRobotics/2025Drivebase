@@ -93,7 +93,7 @@ public class Robot extends TimedRobot {
     }
 
     // Stop the ontrollers from vibrating all the time
-    robotContainer.setRumbleState(false);
+    robotContainer.rumbleControllers(false);
   }
 
   /** This function is called periodically during autonomous. */
