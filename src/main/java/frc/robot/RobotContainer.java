@@ -4,10 +4,13 @@
 
 package frc.robot;
 
+import frc.robot.Constants.DriverStation;
 import frc.robot.commands.FieldOrientedDriveCommand;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.VisionSystem;
 import frc.robot.util.Utilities;
+
+import java.util.function.DoubleSupplier;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 
@@ -29,18 +32,21 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
 
-  // TODO: utilize design ideas in this post:  https://www.chiefdelphi.com/t/command-based-best-practices-for-2025-community-feedback/465602/143
+  // For limiting maximum speed (1.0 = 100% - full speed)
+  private static final double MAX_SPEED_FACTOR = 1.0;
 
-  private final XboxController driverController = new XboxController(0);
-  private final XboxController operatorController = new XboxController(1);
+  // TODO: ** utilize design ideas in this post:  https://www.chiefdelphi.com/t/command-based-best-practices-for-2025-community-feedback/465602/143
+  // For examples on structuring Subsystems, triggers and commands, see: 
+  // https://github.com/wpilibsuite/allwpilib/tree/main/wpilibjExamples/src/main/java/edu/wpi/first/wpilibj/examples/rapidreactcommandbot
+
+  private final XboxController driverController = new XboxController(DriverStation.CONTROLLER_PORT_DRIVER);
+  private final XboxController operatorController = new XboxController(DriverStation.CONTROLLER_PORT_OPERATOR);
   private final Drivetrain drivetrain = new Drivetrain();
   private final VisionSystem visionSystem;
 
   private final SendableChooser<Command> autoChooser;
   private final SendableChooser<Integer> startingPosisitonChooser = new SendableChooser<>();
 
-  // Limits maximum speed
-  private double maxSpeedFactor = 1.0;
 
   /** The container for the robot. Contains subsystems, IO devices, and commands. */
   public RobotContainer() {
@@ -86,13 +92,11 @@ public class RobotContainer {
   }
 
   private void setDefaultCommands() {
-    drivetrain.setDefaultCommand(new FieldOrientedDriveCommand(drivetrain,
-      () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
-      () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * maxSpeedFactor,
-      () -> -Utilities.modifyAxisGeneric(driverController.getRightX(), 1.0, 0.05) * Constants.Kinematics.MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND * maxSpeedFactor
-      )
-    );
-
+    DoubleSupplier translationXSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
+    DoubleSupplier translationYSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
+    DoubleSupplier rotationSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getRightX(), 1.0, 0.05) * Constants.Kinematics.MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND * MAX_SPEED_FACTOR;
+    
+    drivetrain.setDefaultCommand(new FieldOrientedDriveCommand(drivetrain, translationXSupplier, translationYSupplier, rotationSupplier));
   }
 
   /**
@@ -113,17 +117,14 @@ public class RobotContainer {
     Constants.Shuffleboard.COMPETITION_TAB.add("where am I?", startingPosisitonChooser).withPosition(2, 0);
   }
 
-  public void setRumbleState(boolean rumble) {
-    if (rumble) {
-      driverController.setRumble(RumbleType.kLeftRumble, .5);
-      driverController.setRumble(RumbleType.kRightRumble, .5);
-      operatorController.setRumble(RumbleType.kLeftRumble, .5);
-      operatorController.setRumble(RumbleType.kRightRumble, .5);
-    } else {
-      driverController.setRumble(RumbleType.kLeftRumble, 0.0);
-      driverController.setRumble(RumbleType.kRightRumble, 0.0);
-      operatorController.setRumble(RumbleType.kLeftRumble, 0.0);
-      operatorController.setRumble(RumbleType.kRightRumble, 0.0);
-    }
+  //MJR: TODO: If we end up needing this, call it like something like this:
+    // new InstantCommand(() -> rumbleControllers(true)).andThen(new WaitCommand(1.0)).finallyDo(() -> rumbleControllers(false));
+  public void rumbleControllers(boolean rumble) {
+    double rumbleValue = rumble ? 0.5 : 0.0;
+    
+    driverController.setRumble(RumbleType.kLeftRumble, rumbleValue);
+    driverController.setRumble(RumbleType.kRightRumble, rumbleValue);
+    operatorController.setRumble(RumbleType.kLeftRumble, rumbleValue);
+    operatorController.setRumble(RumbleType.kRightRumble, rumbleValue);
   }
 }

@@ -42,7 +42,6 @@ import frc.robot.Constants.Vision;
  */
 public class Drivetrain extends SubsystemBase {
 
-    private String theMove;
     // NavX connected over MXP
     public final AHRS navx;
 
@@ -59,8 +58,7 @@ public class Drivetrain extends SubsystemBase {
     private final SwerveModule backLeftModule;
     private final SwerveModule backRightModule;
 
-    // The speed of the robot in x and y translational velocities and rotational
-    // velocity
+    // The speed of the robot in x and y translational velocities and rotational velocity
     private ChassisSpeeds chassisSpeeds = new ChassisSpeeds(0.0, 0.0, 0.0);
 
     private boolean wheelsLockedX = false; // Boolean statement to control locking the wheels in an X-position
@@ -68,7 +66,7 @@ public class Drivetrain extends SubsystemBase {
 
     private final SwerveDrivePoseEstimator poseEstimator;
 
-    private SwerveModuleState[] states;
+    private SwerveModuleState[] swerveModuleStates = { new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState() };
 
     //Shuffleboard
     private static GenericEntry gyroEntry = Constants.Shuffleboard.COMPETITION_TAB.add("Gryoscope Angle", 0)
@@ -85,11 +83,15 @@ public class Drivetrain extends SubsystemBase {
 
     //https://docs.wpilib.org/en/stable/docs/software/networktables/networktables-intro.html#networktables-organization
     // networktables publisher for advantagescope swerve visualization
-    StructArrayPublisher<SwerveModuleState> swerveStatePublisher = NetworkTableInstance.getDefault()
-            .getStructArrayTopic("/RBR/SwerveStates", SwerveModuleState.struct).publish();
+    StructArrayPublisher<SwerveModuleState> swerveStatePublisherMeasured = NetworkTableInstance.getDefault().getStructArrayTopic("/RBR/SwerveStates/Measured", SwerveModuleState.struct).publish();
+    StructArrayPublisher<SwerveModuleState> swerveStatePublisherSetpoint = NetworkTableInstance.getDefault().getStructArrayTopic("/RBR/SwerveStates/Setpoint", SwerveModuleState.struct).publish();
+
     // networktables publisher for advantagescope 2d pose visualization
-    StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault()
-            .getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
+    StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault().getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
+    // networktables publisher for advantagescope chassis speed visualization
+    StructPublisher<ChassisSpeeds> chassisSpeedPublisherMeasured = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Measured", ChassisSpeeds.struct).publish();
+    //Navx velicity data is too inaccurate to make this useful
+    //StructPublisher<ChassisSpeeds> chassisSpeedPublisherSetpoint = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Setpoint", ChassisSpeeds.struct).publish();
 
     public Drivetrain() {
         // Configure AutoBuilder last
@@ -160,8 +162,6 @@ public class Drivetrain extends SubsystemBase {
                 VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(30)));
         
         zeroGyroscope();
-
-        theMove = "default";
     }
 
     /**
@@ -181,6 +181,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     public double getGyroscopeAngle() {
+        //Note: we need to flip the sign since navx reports clockwise as positive, where wpilib/FRC coordinate system is counter-clockwise as positive
         return -navx.getYaw(); // -180 to 180, 0 degres is forward, ccw is +
     }
 
@@ -224,9 +225,7 @@ public class Drivetrain extends SubsystemBase {
 
     public void updateOdometry() {
         // Update odometry from swerve states
-        poseEstimator.update(
-                getGyroscopeRotation(),
-                getSwerveModulePositions());
+        poseEstimator.update(getGyroscopeRotation(), getSwerveModulePositions());
 
         if (Constants.Vision.VISION_ENABLED) {
             List<EstimatedRobotPose> visionPoseEstimates = visionSystem.getRobotPoseEstimation();
@@ -244,22 +243,6 @@ public class Drivetrain extends SubsystemBase {
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
         return chassisSpeeds;
-    }
-
-    public void setModuleStates(SwerveModuleState[] states) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND);
-        frontLeftModule.setState(states[0]);
-        frontRightModule.setState(states[1]);
-        backLeftModule.setState(states[2]);
-        backRightModule.setState(states[3]);
-    }
-
-    /**
-     * Decide where the center of rotation is going to be based on function call (we
-     * got the moves)
-     **/
-    public void setMoves(String theMove) {
-        this.theMove = theMove;
     }
 
     /**
@@ -280,35 +263,22 @@ public class Drivetrain extends SubsystemBase {
      */
     @Override
     public void periodic() {
-        handleMoves();
+        updateSwerveModuleStates();
         handleLockedStates();
         updateOdometry();
         updateTelemetry();
         //TODO: MJR - consider adding collision detection, eg. https://gist.githubusercontent.com/kauailabs/8c152fa14937b9cdf137/raw/900c99b23a1940e121ed1ae1abd589eb4050b5c1/CollisionDetection.java
     }
 
-    private void handleMoves() {
-        switch (theMove) {
-            case "FL":
-                states = Constants.Kinematics.SWERVE_KINEMATICS.toSwerveModuleStates(chassisSpeeds, 
-                    new Translation2d(Constants.Kinematics.DRIVETRAIN_TRACKWIDTH_METERS / 2., Constants.Kinematics.DRIVETRAIN_WHEELBASE_METERS / 2.)
-                );
-                break;
-            case "FR":
-                states = Constants.Kinematics.SWERVE_KINEMATICS.toSwerveModuleStates(chassisSpeeds,
-                    new Translation2d(Constants.Kinematics.DRIVETRAIN_TRACKWIDTH_METERS / 2., -Constants.Kinematics.DRIVETRAIN_WHEELBASE_METERS / 2.)
-                );
-                break;
-            case "default":
-                states = Constants.Kinematics.SWERVE_KINEMATICS.toSwerveModuleStates(chassisSpeeds);
-                break;
-        }
+    //update state of swerve modules based on current chassis speeds
+    private void updateSwerveModuleStates() {
+        swerveModuleStates = Constants.Kinematics.SWERVE_KINEMATICS.toSwerveModuleStates(chassisSpeeds);
     }
 
     private void handleLockedStates() {
         if (!wheelsLockedX && !wheelsLockedSysId) {
-            // If we are not in wheel's locked mode, set the states normally
-            setModuleStates(states);
+            // If we are not in wheel's locked mode, update swerve modules with new states based on chassis speeds
+            updateSwerveModules(swerveModuleStates);
         } else if (wheelsLockedX) {
             // If we are in wheel's locked to X pattern mode, set the drive velocity to 0 so there is no
             // movment, and command the steer angle to either plus or minus 45 degrees to
@@ -319,6 +289,7 @@ public class Drivetrain extends SubsystemBase {
             backLeftModule.lockModule(-45);
             backRightModule.lockModule(45);
         } else if (wheelsLockedSysId) {
+            // lock wheels at 0 degrees (facing forward) to perform SysId characterization of drive motors
             frontLeftModule.lockModule(0);
             frontRightModule.lockModule(0);
             backLeftModule.lockModule(0);
@@ -326,26 +297,29 @@ public class Drivetrain extends SubsystemBase {
         }
     }
 
-    private void updateTelemetry() {
-        // Publish gyro angle to shuffleboard
-        gyroEntry.setDouble(poseEstimator.getEstimatedPosition().getRotation().getDegrees());
+    // Update the swerve modules with the new states
+    private void updateSwerveModules(SwerveModuleState[] updatedModuleStates) {
+        SwerveDriveKinematics.desaturateWheelSpeeds(updatedModuleStates, Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND);
+        frontLeftModule.setState(updatedModuleStates[0]);
+        frontRightModule.setState(updatedModuleStates[1]);
+        backLeftModule.setState(updatedModuleStates[2]);
+        backRightModule.setState(updatedModuleStates[3]);
+    }
 
-        if (poseEstimator.getEstimatedPosition().getRotation().getDegrees() == 0.0) {
-            gyroWarningEntry.setBoolean(true);
-        } else {
-            gyroWarningEntry.setBoolean(false);
-        }
+    private void updateTelemetry() {
+        Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
+        double currentAngle = estimatedPosition.getRotation().getDegrees();
+        // Publish gyro angle to shuffleboard
+        gyroEntry.setDouble(currentAngle);
+        gyroWarningEntry.setBoolean(currentAngle == 0.0); //show warning if gyro is 0 degrees (TODO: probably want to remove this or make it more useful)
 
         // Advantage scope things
-        posePublisher.set(poseEstimator.getEstimatedPosition());
+        posePublisher.set(estimatedPosition);
+        chassisSpeedPublisherSetpoint.set(chassisSpeeds);
 
-        //TODO: publish both setpoint and actual states to network tables
-        swerveStatePublisher.set(new SwerveModuleState[] {
-                states[0],
-                states[1],
-                states[2],
-                states[3]
-        });
+        swerveStatePublisherMeasured.set(new SwerveModuleState[] { frontLeftModule.getState(), frontRightModule.getState(),
+            backRightModule.getState(), backLeftModule.getState() });
+        swerveStatePublisherSetpoint.set(swerveModuleStates);
     }
 
     public void setVisionSystem(VisionSystem visionSystem) {

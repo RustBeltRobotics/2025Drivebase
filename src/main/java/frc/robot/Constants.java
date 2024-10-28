@@ -26,15 +26,20 @@ import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
  */
 public final class Constants {
 
-  public static class BasicUnits {
+  public static final class BasicUnits {
     public static final double SECONDS_PER_MINUTE = 60.0;
     public static final double DEGREES_PER_REVOLUTION = 360.0;
+  }
+
+  public static final class DriverStation {
+    public static final int CONTROLLER_PORT_DRIVER = 0;
+    public static final int CONTROLLER_PORT_OPERATOR = 1;
   }
 
   /**
    * CAN bus IDs
    */
-  public static class CanID {
+  public static final class CanID {
     //Power
     public static final int POWER_DISTRIBUTION = 1;
     //Swerve drive modules - clockwise starting with front left (battery side is front of robot)
@@ -55,15 +60,15 @@ public final class Constants {
   /**
    * Current limits - measure in Amps
    */
-  public static class CurrentLimit {
-    public static class SparkMax {
-      public static final int SMART_DRIVE = 30;
+  public static final class CurrentLimit {
+    public static final class SparkMax {
+      public static final int SMART_DRIVE = 30; //https://www.chiefdelphi.com/t/clear-concise-best-practices-for-sparkmax-neo-current-limiting/405541/4
       public static final int SMART_STEER = 40;
       public static final int SECONDARY_DRIVE = 80;
       public static final int SECONDARY_STEER = 80;
     }
 
-    public static class Neo {
+    public static final class Neo {
       public static final int SMART = 60;
       public static final int SECONDARY = 80;
     }
@@ -72,7 +77,7 @@ public final class Constants {
   /**
    * Robot physical constraints (max velocity, max angular velocity, SwerveDriveKinematics, etc.)
    */
-  public static class Kinematics {
+  public static final class Kinematics {
 
     public static final double NEO_REVOLUTION_PER_MINUTE = 5676.0;
 
@@ -158,7 +163,7 @@ public final class Constants {
             new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0));
   }
 
-  public static class PathPlanner {
+  public static final class PathPlanner {
     public static final double rotation_P = 1.5;
     public static final double rotation_I = 0.0;
     public static final double rotation_D = 0.0;
@@ -168,7 +173,7 @@ public final class Constants {
     public static final double translation_D = 0.0;
   }
 
-  public static class Vision {
+  public static final class Vision {
     public static final boolean VISION_ENABLED = true;
     public static final String ARDUCAM_MODEL = "OV9281";
     public static final double POSE_AMBIGUITY_CUTOFF = 0.05;  //TODO: test and adjust this value if necessary (photon docs suggest using 0.2)
@@ -193,7 +198,7 @@ public final class Constants {
     /**
      * Unique camera names, usable in PhotonCamera instances
      */
-    public static class CameraName {
+    public static final class CameraName {
       //Note: these names are set in hardware via https://docs.arducam.com/UVC-Camera/Serial-Number-Tool-Guide/
       public static final String CAMERA_1 = "Arducam_OV9281_USB_Camera-1";
       public static final String CAMERA_2 = "Arducam_OV9281_USB_Camera-2";
@@ -204,7 +209,7 @@ public final class Constants {
     /**
      * Mounting position of the cameras on the Robot
      */
-    public static class CameraPose {
+    public static final class CameraPose {
       //TODO: MJR mount cameras on robot and define these values using edu.wpi.first.math.util.Units.inchesToMeters() and Units.degreesToRadians()
       //Note: these are robot to camera poses (position from center of robot to camera lens) - see also edu.wpi.first.math.ComputerVisionUtil.objectToRobotPose()
       //In transform3d - Translation3d values: x+ = forward, y+ = left, z+ = up, Rotation3d is rotation around the transform3d axes
@@ -219,7 +224,7 @@ public final class Constants {
     }
   }
 
-  public static class Game {
+  public static final class Game {
     //Note: field layout values can be obtained by examining the AprilTagFieldLayout .json file for the game
     public static final double FIELD_LENGTH_METERS = 16.541;  //x in field drawings (from 2024 game - update for 2025 if necessary)
     public static final double FIELD_WIDTH_METERS = 8.211;  //y in field drawings (from 2024 game - update for 2025 if necessary)
@@ -228,7 +233,7 @@ public final class Constants {
     public static final double FIELD_POSE_THETA_ERROR_MARGIN_RADIANS = Units.degreesToRadians(2.0);
   }
 
-  public static class Shuffleboard {
+  public static final class Shuffleboard {
     public static final ShuffleboardTab COMPETITION_TAB = edu.wpi.first.wpilibj.shuffleboard.Shuffleboard.getTab("Competition");
     public static final ShuffleboardTab DIAG_TAB = edu.wpi.first.wpilibj.shuffleboard.Shuffleboard.getTab("diag");
   }

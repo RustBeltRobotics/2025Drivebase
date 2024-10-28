@@ -27,7 +27,7 @@ public class Utilities {
      * given power, keeping the same sign as the original value.
      * 
      * @param value    The value you want to modify
-     * @param power    The expmonent you want to raise the value to the power of.
+     * @param power    The exponent you want to raise the value to the power of.
      *                 Can be any positive double, non-integers work too, for
      *                 example 0.5 to take the square root.
      * @param deadband The width of the deadband to apply

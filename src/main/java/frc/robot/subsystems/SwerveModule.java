@@ -13,6 +13,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.Constants.BasicUnits;
 import frc.robot.util.Utilities;
 
 import static frc.robot.Constants.*;
@@ -84,13 +85,11 @@ public class SwerveModule extends SubsystemBase {
         // Setup steer motor absolute encoder
         absoluteSteerEncoder = new CANcoder(encoderID);
 
-        // Zero encoders to ensure steer relative matches absolute
-        resetEncoders();
-        //set the things
-        updatePIDs();
+        resetEncoders(); // Zero encoders to ensure steer relative matches absolute
+        initializePidControllers();
     }
     
-    public void updatePIDs() {
+    public void initializePidControllers() {
         // set PID coefficients (drive)
         drivePidController.setP(DRIVE_P);
         drivePidController.setI(DRIVE_I);
@@ -144,10 +143,10 @@ public class SwerveModule extends SubsystemBase {
 
     /** @return Absolute steer position, degrees, -inf to +inf */
     public double getAbsolutePosition() {
-        return absoluteSteerEncoder.getAbsolutePosition().getValueAsDouble() * 360.;
+        return absoluteSteerEncoder.getAbsolutePosition().getValueAsDouble() * BasicUnits.DEGREES_PER_REVOLUTION;
     }
 
-    /** @return Drive encoder (meters) and steer encoder (Rotation2d) positions */
+    /** @return Position of this swerve module based on Drive encoder (meters) and steer encoder (Rotation2d in radians) positions */
     public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(getDrivePosition(), new Rotation2d(Math.toRadians(getSteerPosition())));
     }
@@ -169,9 +168,9 @@ public class SwerveModule extends SubsystemBase {
     }
 
     /**
-     * Set's the speed and angle of an idividual module.
+     * Sets the speed and angle of this swerve module
      * 
-     * @param state the desired state (velocity, m/s, and steer angle, Rotation2d)
+     * @param state the desired state (velocity in m/s, and steer angle as Rotation2d)
      */
     public void setState(SwerveModuleState state) {
         // If input is minimal, ignore input to avoid reseting steer angle to 0 degrees
@@ -179,7 +178,12 @@ public class SwerveModule extends SubsystemBase {
             stopModule();
             return;
         }
-        state = SwerveModuleState.optimize(state, getState().angle);
+        
+        Rotation2d currentAngle = Rotation2d.fromDegrees(getSteerPosition());
+        // https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html#module-angle-optimization
+        state = SwerveModuleState.optimize(state, currentAngle);
+        // https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html#cosine-compensation
+        state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
         drivePidController.setReference(state.speedMetersPerSecond, CANSparkMax.ControlType.kVelocity);
         setSteerAngle(state.angle.getDegrees());
     }
