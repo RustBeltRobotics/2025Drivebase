@@ -20,7 +20,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 /**
@@ -39,8 +38,8 @@ public class RobotContainer {
   // For examples on structuring Subsystems, triggers and commands, see: 
   // https://github.com/wpilibsuite/allwpilib/tree/main/wpilibjExamples/src/main/java/edu/wpi/first/wpilibj/examples/rapidreactcommandbot
 
-  private final XboxController driverController = new XboxController(DriverStation.CONTROLLER_PORT_DRIVER);
-  private final XboxController operatorController = new XboxController(DriverStation.CONTROLLER_PORT_OPERATOR);
+  private final CommandXboxController driverController = new CommandXboxController(DriverStation.CONTROLLER_PORT_DRIVER);
+  private final CommandXboxController operatorController = new CommandXboxController(DriverStation.CONTROLLER_PORT_OPERATOR);
   private final Drivetrain drivetrain = new Drivetrain();
   // private final VisionSystem visionSystem;
 
@@ -77,18 +76,9 @@ public class RobotContainer {
    */
   private void configureBindings() {
     // TODO: MJR
+    
     // Pressing A button zeros the gyroscope
-    new Trigger(driverController::getAButton).onTrue(new InstantCommand(() -> drivetrain.zeroGyroscope()));
-
-    //These are triggers for the DPad directions
-    // POVButton driverDPadUpButton = new POVButton(driverController, 0);
-    // POVButton driverDPadDownButton = new POVButton(driverController, 180);
-    // POVButton driverDPadLeftButton = new POVButton(driverController, 270);
-    // POVButton driverDPadRightButton = new POVButton(driverController, 90);
-    // POVButton operatorDPadUpButton = new POVButton(operatorController, 0);
-    // POVButton operatorDPadDownButton = new POVButton(operatorController, 180);
-    // POVButton operatorDPadLeftButton = new POVButton(operatorController, 270);
-    // POVButton operatorDPadRightButton = new POVButton(operatorController, 90);
+    driverController.a().onTrue(new InstantCommand(() -> drivetrain.zeroGyroscope()));
   }
 
   private void setDefaultCommands() {
@@ -121,10 +111,12 @@ public class RobotContainer {
     // new InstantCommand(() -> rumbleControllers(true)).andThen(new WaitCommand(1.0)).finallyDo(() -> rumbleControllers(false));
   public void rumbleControllers(boolean rumble) {
     double rumbleValue = rumble ? 0.5 : 0.0;
+    XboxController driver = driverController.getHID();
+    XboxController operator = operatorController.getHID();
     
-    driverController.setRumble(RumbleType.kLeftRumble, rumbleValue);
-    driverController.setRumble(RumbleType.kRightRumble, rumbleValue);
-    operatorController.setRumble(RumbleType.kLeftRumble, rumbleValue);
-    operatorController.setRumble(RumbleType.kRightRumble, rumbleValue);
+    driver.setRumble(RumbleType.kLeftRumble, rumbleValue);
+    driver.setRumble(RumbleType.kRightRumble, rumbleValue);
+    operator.setRumble(RumbleType.kLeftRumble, rumbleValue);
+    operator.setRumble(RumbleType.kRightRumble, rumbleValue);
   }
 }
