@@ -29,6 +29,7 @@ import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.Constants.Vision;
@@ -170,6 +171,10 @@ public class Drivetrain extends SubsystemBase {
      */
     public void zeroGyroscope() {
         poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), new Pose2d(poseEstimator.getEstimatedPosition().getTranslation(), new Rotation2d(0)));
+    }
+
+    public Command zeroGyroscopeCommand() {
+        return runOnce(() -> zeroGyroscope());
     }
 
     /**
