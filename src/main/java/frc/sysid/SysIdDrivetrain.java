@@ -49,7 +49,7 @@ public class SysIdDrivetrain extends SubsystemBase {
         frontLeftDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
         frontLeftDriveMotor.restoreFactoryDefaults();
         frontLeftDriveMotor.setIdleMode(IdleMode.kBrake);
-        frontLeftDriveMotor.setInverted(true);
+        frontLeftDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
         frontLeftDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
         frontLeftDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
 
@@ -62,7 +62,7 @@ public class SysIdDrivetrain extends SubsystemBase {
         frontRightDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
         frontRightDriveMotor.restoreFactoryDefaults();
         frontRightDriveMotor.setIdleMode(IdleMode.kBrake);
-        frontRightDriveMotor.setInverted(true);
+        frontRightDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
         frontRightDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
         frontRightDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
 
@@ -74,7 +74,7 @@ public class SysIdDrivetrain extends SubsystemBase {
         backRightDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
         backRightDriveMotor.restoreFactoryDefaults();
         backRightDriveMotor.setIdleMode(IdleMode.kBrake);
-        backRightDriveMotor.setInverted(true);
+        backRightDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
         backRightDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
         backRightDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
 
@@ -86,7 +86,7 @@ public class SysIdDrivetrain extends SubsystemBase {
         backLeftDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
         backLeftDriveMotor.restoreFactoryDefaults();
         backLeftDriveMotor.setIdleMode(IdleMode.kBrake);
-        backLeftDriveMotor.setInverted(true);
+        backLeftDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
         backLeftDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
         backLeftDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
 

@@ -9,6 +9,8 @@ import java.util.Map;
 import org.littletonrobotics.urcl.URCL;
 
 import com.ctre.phoenix6.SignalLogger;
+
+import edu.wpi.first.net.PortForwarder;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -34,12 +36,9 @@ public class Robot extends TimedRobot {
             .withProperties(Map.of("min", 0, "max", 165))
             .getEntry();
 
-  /**
-   * This function is run when the robot is first started up and should be used for any
-   * initialization code.
-   */
-  @Override
-  public void robotInit() {
+  public Robot() {
+    super();
+
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
@@ -56,6 +55,19 @@ public class Robot extends TimedRobot {
 
     // Log Rev device signals (see https://github.com/Mechanical-Advantage/AdvantageScope/blob/main/docs/REV-LOGGING.md)
     URCL.start();
+
+    //allow access to photonvision coprocessor (orange pi) UIs when tethered to USB port on the rio
+    // PortForwarder.add(5800, "photonvision1.local", 5800);
+    // PortForwarder.add(5801, "photonvision2.local", 5800);
+  }
+
+  /**
+   * This function is run when the robot is first started up and should be used for any
+   * initialization code.
+   */
+  @Override
+  public void robotInit() {
+    //Note: code from robotInit() has been moved to the constructor to match upcoming Wpilib 2025 changes
   }
 
   /**
@@ -91,9 +103,6 @@ public class Robot extends TimedRobot {
     if (autonomousCommand != null) {
       autonomousCommand.schedule();
     }
-
-    // Stop the ontrollers from vibrating all the time
-    robotContainer.rumbleControllers(false);
   }
 
   /** This function is called periodically during autonomous. */

@@ -9,11 +9,13 @@ import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFieldLayout.OriginPosition;
+import edu.wpi.first.math.ComputerVisionUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -21,8 +23,12 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.apriltag.AprilTagFields;
 import frc.robot.Constants;
+
+//TODO: MJR review latest photonvision example for 2025 season and update logic below accordingly
+// https://github.com/PhotonVision/photonvision/blob/master/photonlib-java-examples/poseest/src/main/java/frc/robot/Vision.java
 
 /**
  * Photonvision based vision system - note we are NOT modeled as a Subsystem, since we don't want to block any commands
@@ -41,6 +47,8 @@ public class VisionSystem {
         .getStructArrayTopic("/RBR/Vision/PoseEstimates/Accepted", Pose3d.struct).publish();
     private final StructArrayPublisher<Pose3d> rejectedVisionPosePublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("/RBR/Vision/PoseEstimates/Rejected", Pose3d.struct).publish();
+    private final StructPublisher<Pose3d> multiTagBestPostPublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("/RBR/Vision/PoseEstimates/MultiTag/Best", Pose3d.struct).publish();
 
     //Links for troubleshooting / understanding:
     /*
@@ -89,20 +97,26 @@ public class VisionSystem {
         for (int i = 0; i < cameras.size(); i++) {
             PhotonCamera photonCamera = cameras.get(i);
             PhotonPoseEstimator poseEstimator = poseEstimators.get(i);
-            PhotonPipelineResult pipelineResult = photonCamera.getLatestResult();
+            //TODO: change this to getAllUnreadResults() once available in lib release, iterate over results 
+            PhotonPipelineResult pipelineResult = photonCamera.getLatestResult();  
             List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
             List<Pose3d> rejectedAprilTagsForCamera = new ArrayList<>();
+            MultiTargetPNPResult multiTagResult = pipelineResult.getMultiTagResult();
 
             //https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/multitag.html#enabling-multitag
-            if (pipelineResult.getMultiTagResult().estimatedPose.isPresent) {
-                Transform3d fieldToCamera = pipelineResult.getMultiTagResult().estimatedPose.best;
+            if (multiTagResult.estimatedPose.isPresent) {
+                Transform3d fieldToCamera = multiTagResult.estimatedPose.best;
+                //TODO: discard this result if bestReprojectionError is too high
+                double bestReprojectionError = multiTagResult.estimatedPose.bestReprojErr;  //uom is pixels
                 //TODO: compare this with the EstimatedRobotPose result from below
+                Pose3d multiTagEstimatedRobotPose = new Pose3d(fieldToCamera.getX(), fieldToCamera.getY(), fieldToCamera.getZ(), fieldToCamera.getRotation());
             }
 
             if (pipelineResult.hasTargets()) {
                 int numAprilTagsSeen = pipelineResult.getTargets().size();
 
                 for (PhotonTrackedTarget target : pipelineResult.getTargets()) {
+                    //poseAmbiguity is between 0 and 1 (0 being no ambiguity, and 1 meaning both have the same reprojection error). Numbers above 0.2 are likely to be ambiguous. -1 if invalid.
                     double poseAmbiguity = target.getPoseAmbiguity();
                     boolean isUnambiguous = poseAmbiguity < Constants.Vision.POSE_AMBIGUITY_CUTOFF && poseAmbiguity >= 0;
                     boolean isCloseEnough = target.getBestCameraToTarget().getTranslation().getNorm() < Constants.Vision.DISTANCE_CUTOFF;

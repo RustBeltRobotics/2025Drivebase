@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -135,10 +136,15 @@ public final class Constants {
     /** Distance from center of robot to center of swerve module  **/
     public static final double DRIVETRAIN_BASE_RADIUS = Math.hypot(DRIVETRAIN_TRACKWIDTH_METERS, DRIVETRAIN_WHEELBASE_METERS) / 2.0;
 
-    //SDS Mk4 L3 gear ratios - equivalent to 6.12:1 overall ratio
+    //SDS Mk4i L3 gear ratios - equivalent to 6.12:1 overall ratio
     public static final double DRIVE_GEAR_RATIO = (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0); //Note: (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0) == 1.0/6.12 = 0.1634
 
     public static final double STEER_GEAR_RATIO = 1.0 / (150.0 / 7.0); //150/7:1 gear ratio
+
+    //TODO: Figure out why true is needed for correct wheel direction, when in theory it should be false
+    public static final boolean DRIVE_MOTOR_INVERTED = true; //should be false for Mk4i, true for Mk4 (tested on Eclipse robot)
+
+    public static final boolean STEER_MOTOR_INVERTED = true; //should be true for Mk4i, false for Mk4 (tested on Eclipse robot)
 
     /** Conversion between motor rotations and drive meters */
     public static final double DRIVE_POSITION_CONVERSION = WHEEL_CIRCUMFERENCE * DRIVE_GEAR_RATIO;
@@ -155,12 +161,12 @@ public final class Constants {
     /**
      * The maximum linear velocity of a swerve module in meters per second. Calculate using https://www.reca.lc/drive
      */
-    public static final double MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND = 4.53;  //TODO: compare to empirical measurement
+    public static final double MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND = 5.37;  //TODO: compare to empirical measurement
 
     /**
      * The maximum angular velocity of the robot in radians per second. This is a
      * measure of how fast the robot can rotate in place.
-     * 4.53 M/Sec / 0.41 M = 11.0488 Rad / Sec = 633.05 degrees / sec
+     * 5.37 M/Sec / 0.41 M = 13.1 Rad / Sec = 750.57 degrees / sec
      */
     public static final double MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND = MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND / DRIVETRAIN_BASE_RADIUS; //TODO: compare to empirical measurement (calc in comment seems high)
 
@@ -169,10 +175,10 @@ public final class Constants {
      * See https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html#robot-drive-kinematics
      */
     public static final SwerveDriveKinematics SWERVE_KINEMATICS = new SwerveDriveKinematics(
-            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),
-            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0),
-            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),
-            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0));
+            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),    //Front Left
+            new Translation2d(DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0),   //Front Right
+            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, DRIVETRAIN_WHEELBASE_METERS / 2.0),   //Back Left
+            new Translation2d(-DRIVETRAIN_TRACKWIDTH_METERS / 2.0, -DRIVETRAIN_WHEELBASE_METERS / 2.0)); //Back Right
   }
 
   public static final class PathPlanner {
@@ -199,13 +205,9 @@ public final class Constants {
     /**
      * Standard deviations for vision measurements. Increase these numbers to trust your
      * vision measurements less. This matrix is in the form [x, y, theta]ᵀ, with units in meters and radians.
+     * Note that the SwerveDrivePoseEstimator default is 0.9 for all values for vision measurements.
      */
-    public static final Matrix<N3, N1> VISION_MEASUREMENT_STANDARD_DEVIATIONS = MatBuilder.fill(Nat.N3(), Nat.N1(),
-        // if these numbers are less than one, multiplying will do bad things
-        1, // x
-        1, // y
-        1 * Math.PI // theta
-    );
+    public static final Matrix<N3, N1> VISION_MEASUREMENT_STANDARD_DEVIATIONS = VecBuilder.fill(0.9, 0.9, 0.9)''
     
     /**
      * Unique camera names, usable in PhotonCamera instances

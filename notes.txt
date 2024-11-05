@@ -14,7 +14,6 @@ SysId for Swerve:
 ----------
 TODO:
 
-- Test swerve modules using xbox controller
 - Run SysId tests on drive motors on field
     - Feed logs into SysId tool \FRC\2024\2024 WPILib Tools\SysId 2024
     - https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/loading-data.html

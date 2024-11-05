@@ -21,6 +21,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
@@ -75,12 +76,6 @@ public class Drivetrain extends SubsystemBase {
             .withSize(3, 4)
             .getEntry();
 
-    private static GenericEntry gyroWarningEntry = Constants.Shuffleboard.COMPETITION_TAB.add("!GYRO!", false)
-            .withWidget("Boolean Box")
-            .withPosition(7, 0)
-            .withProperties(Map.of("colorWhenTrue", "red", "colorWhenFalse", "gray"))
-            .getEntry();
-
     //https://docs.wpilib.org/en/stable/docs/software/networktables/networktables-intro.html#networktables-organization
     // networktables publisher for advantagescope swerve visualization
     StructArrayPublisher<SwerveModuleState> swerveStatePublisherMeasured = NetworkTableInstance.getDefault().getStructArrayTopic("/RBR/SwerveStates/Measured", SwerveModuleState.struct).publish();
@@ -92,6 +87,11 @@ public class Drivetrain extends SubsystemBase {
     // StructPublisher<ChassisSpeeds> chassisSpeedPublisherMeasured = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Measured", ChassisSpeeds.struct).publish();
     //Navx velicity data is too inaccurate to make this useful
     StructPublisher<ChassisSpeeds> chassisSpeedPublisherSetpoint = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Setpoint", ChassisSpeeds.struct).publish();
+
+    DoublePublisher frontLeftAbsoluteEncoderPublisher = NetworkTableInstance.getDefault().getDoubleTopic("/RBR/Swerve/Rotation/Absolute/FL").publish();
+    DoublePublisher frontRightAbsoluteEncoderPublisher = NetworkTableInstance.getDefault().getDoubleTopic("/RBR/Swerve/Rotation/Absolute/FR").publish();
+    DoublePublisher backLeftAbsoluteEncoderPublisher = NetworkTableInstance.getDefault().getDoubleTopic("/RBR/Swerve/Rotation/Absolute/BL").publish();
+    DoublePublisher backRightAbsoluteEncoderPublisher = NetworkTableInstance.getDefault().getDoubleTopic("/RBR/Swerve/Rotation/Absolute/BR").publish();
 
     public Drivetrain() {
         // Configure AutoBuilder last
@@ -203,8 +203,8 @@ public class Drivetrain extends SubsystemBase {
 
     public SwerveModulePosition[] getSwerveModulePositions() {
         return new SwerveModulePosition[] {
-                frontLeftModule.getPosition(), frontRightModule.getPosition(), backLeftModule.getPosition(),
-                backRightModule.getPosition()
+                frontLeftModule.getPosition(), frontRightModule.getPosition(),
+                backLeftModule.getPosition(), backRightModule.getPosition()
         };
     }
 
@@ -230,6 +230,7 @@ public class Drivetrain extends SubsystemBase {
 
         if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
             List<EstimatedRobotPose> visionPoseEstimates = visionSystem.getRobotPoseEstimation();
+            //TODO: review cases where we get multiple valid estimates back to determine if we should apply further filtering here to drop potential bad results
             for (EstimatedRobotPose visionPoseEstimate : visionPoseEstimates) {
                 //TODO: define this method / test and/or use a constant here for the standard deviation
                 // poseEstimator.setVisionMeasurementStdDevs(visionSystem.getVisionMeasurementStandardDeviation(visionPoseEstimate));
@@ -309,18 +310,22 @@ public class Drivetrain extends SubsystemBase {
 
     private void updateTelemetry() {
         Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
-        double currentAngle = estimatedPosition.getRotation().getDegrees();
+        double currentRobotAngle = estimatedPosition.getRotation().getDegrees();
         // Publish gyro angle to shuffleboard
-        gyroEntry.setDouble(currentAngle);
-        gyroWarningEntry.setBoolean(currentAngle == 0.0); //show warning if gyro is 0 degrees (TODO: probably want to remove this or make it more useful)
+        gyroEntry.setDouble(currentRobotAngle);
 
         // Advantage scope things
         posePublisher.set(estimatedPosition);
         chassisSpeedPublisherSetpoint.set(chassisSpeeds);
 
         swerveStatePublisherMeasured.set(new SwerveModuleState[] { frontLeftModule.getState(), frontRightModule.getState(),
-            backRightModule.getState(), backLeftModule.getState() });
+            backLeftModule.getState(), backRightModule.getState() });
         swerveStatePublisherSetpoint.set(swerveModuleStates);
+
+        frontLeftAbsoluteEncoderPublisher.set(frontLeftModule.getAbsolutePosition());
+        frontRightAbsoluteEncoderPublisher.set(frontRightModule.getAbsolutePosition());
+        backLeftAbsoluteEncoderPublisher.set(backLeftModule.getAbsolutePosition());
+        backRightAbsoluteEncoderPublisher.set(backRightModule.getAbsolutePosition());
     }
 
     public void setVisionSystem(VisionSystem visionSystem) {

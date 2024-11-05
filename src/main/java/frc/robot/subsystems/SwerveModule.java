@@ -16,8 +16,6 @@ import frc.robot.Constants;
 import frc.robot.Constants.BasicUnits;
 import frc.robot.util.Utilities;
 
-import static frc.robot.Constants.*;
-
 /**
  * Models an individual wheel swerve module: drive motor, steer motor, encoders (for reading distance traveled, turn angle, steer velocity, etc.)
  */
@@ -33,6 +31,7 @@ public class SwerveModule extends SubsystemBase {
     // For how to tune these values, see: https://www.chiefdelphi.com/t/official-sds-mk3-mk4-code/397109/17
     //TODO: test with these values as well
     //  https://github.com/SwerveDriveSpecialties/Do-not-use-swerve-lib-2022-unmaintained/blob/develop/src/main/java/com/swervedrivespecialties/swervelib/Mk4iSwerveModuleHelper.java#L40
+    //  https://yagsl.gitbook.io/yagsl/configuring-yagsl/how-to-tune-pidf#starting-points
     public static final double STEER_P = 0.01;
     public static final double STEER_I = 0.0;
     public static final double STEER_D = 0.0;
@@ -49,12 +48,11 @@ public class SwerveModule extends SubsystemBase {
     private final CANcoder absoluteSteerEncoder;
 
     public SwerveModule(int driveID, int steerID, int encoderID) {
-        //TODO: MJR this code is for SDS MK4 - we will be using MK4i, update accordingly (still L3 gear ratio)
         // Setup drive motor SparkMax
         driveMotor = new CANSparkMax(driveID, MotorType.kBrushless);
         driveMotor.restoreFactoryDefaults();
         driveMotor.setIdleMode(IdleMode.kBrake);
-        driveMotor.setInverted(true);
+        driveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
         driveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
         driveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
 
@@ -70,7 +68,7 @@ public class SwerveModule extends SubsystemBase {
         steerMotor = new CANSparkMax(steerID, MotorType.kBrushless);
         steerMotor.restoreFactoryDefaults();
         steerMotor.setIdleMode(IdleMode.kBrake);
-        steerMotor.setInverted(false);
+        steerMotor.setInverted(Constants.Kinematics.STEER_MOTOR_INVERTED);
         steerMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_STEER);
         steerMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_STEER);
 

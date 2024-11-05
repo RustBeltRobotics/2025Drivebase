@@ -4,13 +4,14 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.DriverStation;
 
 /**
  * Robot class for running SysId characterization routines on subsystems.
  */
 public class SysIdRoutineRobot extends TimedRobot {
 
-    private final CommandXboxController driverController = new CommandXboxController(0);
+    private final CommandXboxController driverController = new CommandXboxController(DriverStation.CONTROLLER_PORT_DRIVER);
     private final SysIdDrivetrain drivetrain = new SysIdDrivetrain();
 
     /**

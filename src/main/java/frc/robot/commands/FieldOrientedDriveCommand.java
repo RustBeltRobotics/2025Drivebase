@@ -1,6 +1,7 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Drivetrain;
 
@@ -14,9 +15,9 @@ public class FieldOrientedDriveCommand extends Command {
     private final Drivetrain drivetrain;
 
     // DoubleSupplier objects need to be used, not double
-    private final DoubleSupplier translationXSupplier;
-    private final DoubleSupplier translationYSupplier;
-    private final DoubleSupplier rotationSupplier;
+    private final DoubleSupplier translationXSupplier;  //X+ is forward, X- is backward
+    private final DoubleSupplier translationYSupplier;  //Y+ is strafing to the left, Y- is strafing to the right
+    private final DoubleSupplier rotationSupplier;  //Positive is counter-clockwise, negative is clockwise
 
     public FieldOrientedDriveCommand(Drivetrain drivetrain,
             DoubleSupplier translationXSupplier,
@@ -38,12 +39,14 @@ public class FieldOrientedDriveCommand extends Command {
      */
     @Override
     public void execute() {
+        //TODO: MJR - Monitor result of https://github.com/wpilibsuite/allwpilib/issues/7332
+        // may want to change the sequence of discretize -> toSwerveModuleStates() -> desaturateWheelSpeeds to what is suggested in the linked issue 
         ChassisSpeeds desiredSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
                     translationXSupplier.getAsDouble(),
                     translationYSupplier.getAsDouble(),
                     rotationSupplier.getAsDouble(),
                     drivetrain.getPoseRotation());
-        drivetrain.drive(ChassisSpeeds.discretize(desiredSpeeds, 0.020));
+        drivetrain.drive(ChassisSpeeds.discretize(desiredSpeeds, TimedRobot.kDefaultPeriod));
     }
 
     /** When the drive method is interupted, set all velocities to zero. */
