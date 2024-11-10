@@ -22,10 +22,13 @@ import frc.robot.util.Utilities;
 public class SwerveModule extends SubsystemBase {
 
     // Drive PID Constants
-    public static final double DRIVE_P = 0.2;
+    public static final double DRIVE_FEEDFORWARD_KV = 2.3489;  //From SysId, confirmed with recalc https://www.reca.lc/drive
+    // public static final double DRIVE_P = 0.2;  //From Eclipse
+    public static final double DRIVE_P = 0.00044742;  //From SysId
     public static final double DRIVE_I = 0.0;
     public static final double DRIVE_D = 0.0;
-    public static final double DRIVE_F = 0.22;
+    // public static final double DRIVE_FF = 0.22;  //From Eclipse
+    public static final double DRIVE_FF = 1.0 / DRIVE_FEEDFORWARD_KV;
 
     // Steer PID Constants
     // For how to tune these values, see: https://www.chiefdelphi.com/t/official-sds-mk3-mk4-code/397109/17
@@ -35,7 +38,7 @@ public class SwerveModule extends SubsystemBase {
     public static final double STEER_P = 0.01;
     public static final double STEER_I = 0.0;
     public static final double STEER_D = 0.0;
-    public static final double STEER_F = 0.0;
+    public static final double STEER_FF = 0.0;
 
     private final CANSparkMax driveMotor;
     private final CANSparkMax steerMotor;
@@ -92,7 +95,7 @@ public class SwerveModule extends SubsystemBase {
         drivePidController.setP(DRIVE_P);
         drivePidController.setI(DRIVE_I);
         drivePidController.setD(DRIVE_D);
-        drivePidController.setFF(DRIVE_F);
+        drivePidController.setFF(DRIVE_FF);
         drivePidController.setIZone(0.0);
         //drivePidController.setOutputRange(kMinOutput.getDouble(-1.), kMaxOutput.getDouble(1.));
         drivePidController.setPositionPIDWrappingEnabled(false);

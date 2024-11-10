@@ -207,7 +207,7 @@ public final class Constants {
      * vision measurements less. This matrix is in the form [x, y, theta]ᵀ, with units in meters and radians.
      * Note that the SwerveDrivePoseEstimator default is 0.9 for all values for vision measurements.
      */
-    public static final Matrix<N3, N1> VISION_MEASUREMENT_STANDARD_DEVIATIONS = VecBuilder.fill(0.9, 0.9, 0.9)''
+    public static final Matrix<N3, N1> VISION_MEASUREMENT_STANDARD_DEVIATIONS = VecBuilder.fill(0.9, 0.9, 0.9);
     
     /**
      * Unique camera names, usable in PhotonCamera instances

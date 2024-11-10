@@ -15,6 +15,16 @@ SysId for Swerve:
 TODO:
 
 - Run SysId tests on drive motors on field
+    - Re-run sysid tests using fresh battery (had to adjust voltage reading code, was returning 0 values)
+        - Place robot with wheels all facing forward (bevels on left), ensure front of robot if facing correct direction
+        - Deploy main robot code and start tele-op to reset the encoders (don't move the robot using joystick though)
+        - Deploy sysid code, then run the 4 tests
+        - Grab the .wpilog file from USB drive via SFTP to /U/ drive
     - Feed logs into SysId tool \FRC\2024\2024 WPILib Tools\SysId 2024
     - https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/loading-data.html
     - https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/analyzing-gains.html
+- For Krakens, TalonFX current limits:
+    - Default values for 2025s
+        Stator current limit of 120 A
+        Supply current limit of 70 A
+        Supply current lower limit of 40 A after limiting (at 70 A) for 1 second

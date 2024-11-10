@@ -95,6 +95,9 @@ public class SysIdDrivetrain extends SubsystemBase {
         backLeftDriveEncoder.setVelocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
         backLeftDriveEncoder.setPosition(0.0);
 
+        //TODO: MJR figure out why we get this error when loadfing data in sysid
+        // https://www.chiefdelphi.com/t/sysid-routine-not-properly-recording-motor-speed/455172
+
         // Create a new SysId routine for characterizing the drive.
         m_sysIdRoutine = new SysIdRoutine(
             // Empty config defaults to 1 volt/second ramp rate and 7 volt step voltage.
@@ -112,19 +115,23 @@ public class SysIdDrivetrain extends SubsystemBase {
                 log -> {
                     // Record a frame for the motors.
                     log.motor("drive-front-left")
-                        .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        // .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.getAppliedOutput() * frontLeftDriveMotor.getBusVoltage(), Volts))
                         .linearPosition(m_distance.mut_replace(frontLeftDriveEncoder.getPosition(), Meters))
                         .linearVelocity(m_velocity.mut_replace(frontLeftDriveEncoder.getVelocity(), MetersPerSecond));
                     log.motor("drive-front-right")
-                        .voltage(m_appliedVoltage.mut_replace(frontRightDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        // .voltage(m_appliedVoltage.mut_replace(frontRightDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.getAppliedOutput() * frontLeftDriveMotor.getBusVoltage(), Volts))
                         .linearPosition(m_distance.mut_replace(frontRightDriveEncoder.getPosition(), Meters))
                         .linearVelocity(m_velocity.mut_replace(frontRightDriveEncoder.getVelocity(), MetersPerSecond));
                     log.motor("drive-back-right")
-                        .voltage(m_appliedVoltage.mut_replace(backRightDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        // .voltage(m_appliedVoltage.mut_replace(backRightDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.getAppliedOutput() * frontLeftDriveMotor.getBusVoltage(), Volts))
                         .linearPosition(m_distance.mut_replace(backRightDriveEncoder.getPosition(), Meters))
                         .linearVelocity(m_velocity.mut_replace(backRightDriveEncoder.getVelocity(), MetersPerSecond));
                     log.motor("drive-back-left")
-                        .voltage(m_appliedVoltage.mut_replace(backLeftDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                        // .voltage(m_appliedVoltage.mut_replace(backLeftDriveMotor.get() * RobotController.getBatteryVoltage(), Volts))
+                    .voltage(m_appliedVoltage.mut_replace(frontLeftDriveMotor.getAppliedOutput() * frontLeftDriveMotor.getBusVoltage(), Volts))
                         .linearPosition(m_distance.mut_replace(backLeftDriveEncoder.getPosition(), Meters))
                         .linearVelocity(m_velocity.mut_replace(backLeftDriveEncoder.getVelocity(), MetersPerSecond));
                 },
