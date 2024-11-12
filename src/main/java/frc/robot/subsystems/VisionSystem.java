@@ -24,8 +24,12 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.apriltag.AprilTagFields;
 import frc.robot.Constants;
+import frc.robot.vision.CameraPosition;
+import frc.robot.vision.VisionCamera;
 
 //TODO: MJR review latest photonvision example for 2025 season and update logic below accordingly
 // https://github.com/PhotonVision/photonvision/blob/master/photonlib-java-examples/poseest/src/main/java/frc/robot/Vision.java
@@ -37,8 +41,7 @@ import frc.robot.Constants;
 public class VisionSystem {
 
     private final AprilTagFieldLayout fieldLayout;
-    private final List<PhotonCamera> cameras = new ArrayList<>();
-    private final List<PhotonPoseEstimator> poseEstimators = new ArrayList<>();
+    private final List<VisionCamera> visionCameras = new ArrayList<>();
     private final StructArrayPublisher<Pose3d> acceptedTagPublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("/RBR/Vision/AprilTags/Accepted", Pose3d.struct).publish();
     private final StructArrayPublisher<Pose3d> rejectedTagPublisher = NetworkTableInstance.getDefault()
@@ -66,21 +69,31 @@ public class VisionSystem {
             throw new RuntimeException(e);
         }
 
-        PhotonCamera camera1 = new PhotonCamera(Constants.Vision.CameraName.CAMERA_1);
-        PhotonCamera camera2 = new PhotonCamera(Constants.Vision.CameraName.CAMERA_2);
-        PhotonCamera camera3 = new PhotonCamera(Constants.Vision.CameraName.CAMERA_3);
-        PhotonCamera camera4 = new PhotonCamera(Constants.Vision.CameraName.CAMERA_4);
+        VisionCamera frontLeftCamera = new VisionCamera(Constants.Vision.CameraName.FRONT_LEFT, CameraPosition.FRONT_LEFT,
+            Constants.Vision.CameraPose.FRONT_LEFT, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, fieldLayout);   
+        VisionCamera frontRightCamera = new VisionCamera(Constants.Vision.CameraName.FRONT_RIGHT, CameraPosition.FRONT_RIGHT,
+            Constants.Vision.CameraPose.FRONT_RIGHT, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, fieldLayout);
+        VisionCamera backRightCamera = new VisionCamera(Constants.Vision.CameraName.BACK_RIGHT, CameraPosition.BACK_RIGHT,
+            Constants.Vision.CameraPose.BACK_RIGHT, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, fieldLayout);
+        VisionCamera backLeftCamera = new VisionCamera(Constants.Vision.CameraName.BACK_LEFT, CameraPosition.BACK_LEFT,
+            Constants.Vision.CameraPose.BACK_LEFT, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, fieldLayout);
+        visionCameras.add(frontLeftCamera);           
+        visionCameras.add(frontRightCamera);           
+        visionCameras.add(backRightCamera);           
+        visionCameras.add(backLeftCamera);
 
-        cameras.add(camera1);
-        cameras.add(camera2);
-        cameras.add(camera3);
-        cameras.add(camera4);
+        //Do not track cameras that are not actively connected at time of constructor intiialization
+        visionCameras.removeIf(c -> {
+            boolean isDisconnected = !c.isCameraConnected();
+            if (isDisconnected) {
+                System.out.println("Warning: " + c.getCameraPosition() + " Camera (" + c.getCameraName() + ") disconnected!");
+                //TODO: publish alert warnings if not connected
+            }
+
+            return isDisconnected;
+        });
+        
         //TODO: set pipeline index explicitly for all cameras for AprilTag processing
-
-        poseEstimators.add(new PhotonPoseEstimator(fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera1, Constants.Vision.CameraPose.CAMERA_1));
-        poseEstimators.add(new PhotonPoseEstimator(fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera2, Constants.Vision.CameraPose.CAMERA_2));
-        poseEstimators.add(new PhotonPoseEstimator(fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera3, Constants.Vision.CameraPose.CAMERA_3));
-        poseEstimators.add(new PhotonPoseEstimator(fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera4, Constants.Vision.CameraPose.CAMERA_4));
     }
  
     /**
@@ -89,14 +102,15 @@ public class VisionSystem {
      * @return List of EstimatedRobotPose - one per camera
      */
     public List<EstimatedRobotPose> getRobotPoseEstimation() {
-        List<EstimatedRobotPose> acceptedPoses = new ArrayList<>(poseEstimators.size());
-        List<EstimatedRobotPose> rejectedPoses = new ArrayList<>(poseEstimators.size());
+        List<EstimatedRobotPose> acceptedPoses = new ArrayList<>(visionCameras.size());
+        List<EstimatedRobotPose> rejectedPoses = new ArrayList<>(visionCameras.size());
         List<Pose3d> usedAprilTags = new ArrayList<>();
         List<Pose3d> rejectedAprilTags = new ArrayList<>();
 
-        for (int i = 0; i < cameras.size(); i++) {
-            PhotonCamera photonCamera = cameras.get(i);
-            PhotonPoseEstimator poseEstimator = poseEstimators.get(i);
+        for (int i = 0; i < visionCameras.size(); i++) {
+            VisionCamera visionCamera = visionCameras.get(i);
+            PhotonCamera photonCamera = visionCamera.getCameraInstance();
+            PhotonPoseEstimator poseEstimator = visionCamera.getPoseEstimator();
             //TODO: change this to getAllUnreadResults() once available in lib release, iterate over results 
             PhotonPipelineResult pipelineResult = photonCamera.getLatestResult();  
             List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
@@ -216,14 +230,18 @@ public class VisionSystem {
     */
 
     public void takeRawImageSnapshot() {
-        for (PhotonCamera camera : cameras) {
-            camera.takeInputSnapshot();
+        for (VisionCamera visionCamera : visionCameras) {
+            if (visionCamera.isCameraConnected()) {
+                visionCamera.getCameraInstance().takeInputSnapshot();
+            }
         }
     }
 
     public void takeImageSnapshot() {
-        for (PhotonCamera camera : cameras) {
-            camera.takeOutputSnapshot();
+        for (VisionCamera visionCamera : visionCameras) {
+            if (visionCamera.isCameraConnected()) {
+                visionCamera.getCameraInstance().takeOutputSnapshot();
+            }
         }
     }
 }

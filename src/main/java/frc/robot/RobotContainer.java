@@ -40,7 +40,7 @@ public class RobotContainer {
   private final CommandXboxController driverController = new CommandXboxController(DriverStation.CONTROLLER_PORT_DRIVER);
   private final CommandXboxController operatorController = new CommandXboxController(DriverStation.CONTROLLER_PORT_OPERATOR);
   private final Drivetrain drivetrain = new Drivetrain();
-  // private final VisionSystem visionSystem;
+  private final VisionSystem visionSystem;
 
   private final SendableChooser<Command> autoChooser;
   private final SendableChooser<Integer> startingPosisitonChooser = new SendableChooser<>();
@@ -51,8 +51,8 @@ public class RobotContainer {
     autoChooser = AutoBuilder.buildAutoChooser();
 
     if (Constants.Vision.VISION_ENABLED) {
-      // visionSystem = new VisionSystem();
-      // drivetrain.setVisionSystem(visionSystem);
+      visionSystem = new VisionSystem();
+      drivetrain.setVisionSystem(visionSystem);
     }
 
     setDefaultCommands();

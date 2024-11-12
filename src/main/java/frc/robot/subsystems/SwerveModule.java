@@ -111,7 +111,7 @@ public class SwerveModule extends SubsystemBase {
         // IZone value is irrelevant, but if we ever want to incorporate an I gain,
         // we'll definitely want to keep an eye on this one.
         steerPidController.setIZone(0.0);
-        steerPidController.setFF(STEER_F);
+        steerPidController.setFF(STEER_FF);
         steerPidController.setOutputRange(-1.0, 1.0);
         // Enable PID wrap around for the turning motor. This will allow the PID
         // controller to go through 0 to get to the setpoint i.e. going from 350 degrees

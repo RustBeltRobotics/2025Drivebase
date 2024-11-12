@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Nat;
@@ -201,6 +203,7 @@ public final class Constants {
     public static final double DISTANCE_CUTOFF = 4.0;  //Tag readings beyond this distance (in meters) will be considered invalid
     public static final double DISTANCE_WEIGHT = 7.0;
     public static final int TAG_PRESENCE_WEIGHT = 10;
+    public static final PoseStrategy POSE_STRATEGY = PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
 
     /**
      * Standard deviations for vision measurements. Increase these numbers to trust your
@@ -214,10 +217,10 @@ public final class Constants {
      */
     public static final class CameraName {
       //Note: these names are set in hardware via https://docs.arducam.com/UVC-Camera/Serial-Number-Tool-Guide/
-      public static final String CAMERA_1 = "Arducam_OV9281_USB_Camera-1";
-      public static final String CAMERA_2 = "Arducam_OV9281_USB_Camera-2";
-      public static final String CAMERA_3 = "Arducam_OV9281_USB_Camera-3";
-      public static final String CAMERA_4 = "Arducam_OV9281_USB_Camera-4";
+      public static final String FRONT_LEFT = "Arducam_OV9281_USB_Camera-2";
+      public static final String FRONT_RIGHT = "Arducam_OV9281_USB_Camera-3";
+      public static final String BACK_RIGHT = "Arducam_OV9281_USB_Camera-1";
+      public static final String BACK_LEFT = "Arducam_OV9281_USB_Camera-4";
     }
 
     /**
@@ -231,10 +234,10 @@ public final class Constants {
       // https://docs.wpilib.org/en/stable/_images/drive-yaw-pitch-roll.svg
       //Note: these values can be visualized in AdvantageScope if published over NetworkTables - https://github.com/Mechanical-Advantage/AdvantageScope/blob/main/docs/tabs/3D-FIELD.md
       //example - https://github.com/Mechanical-Advantage/RobotCode2024/blob/main/src/main/java/org/littletonrobotics/frc2024/subsystems/apriltagvision/AprilTagVisionConstants.java#L30
-      public static final Transform3d CAMERA_1 = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));
-      public static final Transform3d CAMERA_2 = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));
-      public static final Transform3d CAMERA_3 = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));
-      public static final Transform3d CAMERA_4 = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));
+      public static final Transform3d FRONT_LEFT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //front left - photonvision1
+      public static final Transform3d FRONT_RIGHT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //front right - photonvision2
+      public static final Transform3d BACK_RIGHT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //back right - photonvision1
+      public static final Transform3d BACK_LEFT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //back left - photonvision2
     }
   }
 
