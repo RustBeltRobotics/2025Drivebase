@@ -12,8 +12,7 @@ SysId for Swerve:
             - https://github.com/StuyPulse/SwerveSysId
 
 ----------
-TODO:
-
+Done:
 - Run SysId tests on drive motors on field
     - Re-run sysid tests using fresh battery (had to adjust voltage reading code, was returning 0 values)
         - Place robot with wheels all facing forward (bevels on left), ensure front of robot if facing correct direction
@@ -23,8 +22,56 @@ TODO:
     - Feed logs into SysId tool \FRC\2024\2024 WPILib Tools\SysId 2024
     - https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/loading-data.html
     - https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/analyzing-gains.html
+
+TODO:
+- Confirm Arducam model is set to OV9281 and FOV is set properly on cameras page for each camera
+- Confirm Camera name/nickname on cameras page matches name set in Arducam naming app
+    - https://docs.photonvision.org/en/v2025.0.0-beta-4/docs/quick-start/quick-configure.html
+- Confirm/fix configuration for camera4 on photon2 orange pi
+    - import saved calibration data .json files from camera1 (C:\Users\mike.r\Desktop\FRC\photonvision\)
+    - sudo apt-get install v4l-utils
+    - v4l2-ctl --list-devices
+        - then run the following to get details (change device id as appropriate to match list outputs):
+            - v4l2-ctl -d /dev/video0 --all
+- Set recommended pipeline settings for each camera for AprilTag Detection
+    - https://docs.photonvision.org/en/v2025.0.0-beta-4/docs/quick-start/quick-configure.html#apriltag
+Input:
+    - Exposure and Gain:
+        - Adjust these to achieve good brightness without flicker and low motion blur. This may vary based on lighting conditions in your competition environment
+        - To avoid motion blur issues:
+            - Lower your exposure as low as possible. Using gain and brightness to account for lack of brightness.
+        - For all pipelines, exposure time should be set as low as possible while still allowing for the target to be reliably tracked. 
+            This allows for faster processing as decreasing exposure will increase your camera FPS.
+    - 1280x800 resolution
+    - Mode: 3d
+AprilTag:
+    - Tag Family 36h11 (verify 2025 game is using the same family as 2024)
+    - Decimate 2
+    - Blur: 0
+    - Threads: 4 (O PI has 8 cores/threads - so 4 per camera)
+    - Refine Edges: On
+    - Max Error Bits: 2 (maybe test with 3 at some point based on docs)
+    - Decision Margin Cutoff: 30
+    - Post Iterations: 
+Output:
+    - Show Multiple Targets: Off
+    - Do Multi-Target Estimation: On (This is "Multi-Tag")
+
+- Implement vision simulation
+    - https://docs.photonvision.org/en/v2025.0.0-beta-4/docs/simulation/simulation-java.html
+    - https://github.com/PhotonVision/photonvision/tree/2a6fa1b6ac81f239c59d724da5339f608897c510/photonlib-java-examples/swervedriveposeestsim
+    
+- When closer to FRC season, perform more detailed camera calibration with 1 camera, taking lots of snapshot images
+    - https://docs.photonvision.org/en/v2025.0.0-beta-4/docs/quick-start/camera-calibration.html
+    - https://docs.photonvision.org/en/v2025.0.0-beta-4/docs/calibration/calibration.html
+    - Print and mount the board on a clipboard or piece of firm cardboard, move the board for snapshots (not the camera)
+    - Verify 
+
 - For Krakens, TalonFX current limits:
     - Default values for 2025s
         Stator current limit of 120 A
         Supply current limit of 70 A
         Supply current lower limit of 40 A after limiting (at 70 A) for 1 second
+    - Example codebases:
+        - https://github.com/StuyPulse/Izzi/blob/main/src/main/java/com/stuypulse/robot/subsystems/swerve/modules/KrakenSwerveModule.java
+        - https://github.com/StuyPulse/Izzi/blob/main/src/main/java/com/stuypulse/robot/constants/Motors.java

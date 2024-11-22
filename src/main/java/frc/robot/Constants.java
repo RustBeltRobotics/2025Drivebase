@@ -17,6 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.Unit;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 
 /**
@@ -127,7 +128,7 @@ public final class Constants {
      * Should be measured from center to center
      */
     public static final double DRIVETRAIN_TRACKWIDTH_METERS = Units.inchesToMeters(22.875);
-
+    
     /**
      * The front-to-back distance between the drivetrain wheels
      * <p>
@@ -227,17 +228,28 @@ public final class Constants {
      * Mounting position of the cameras on the Robot
      */
     public static final class CameraPose {
-      //TODO: MJR mount cameras on robot and define these values using edu.wpi.first.math.util.Units.inchesToMeters() and Units.degreesToRadians()
+      private static final double CAM_XY_FROM_CENTER_OF_ROBOT = Units.inchesToMeters(10.0625);
+      private static final double CAM_Z_FROM_FLOOR = Units.inchesToMeters(8.5);
+      private static final double CAM_PITCH_ANGLE = -Units.degreesToRadians(25.0);
       //Note: these are robot to camera poses (position from center of robot to camera lens) - see also edu.wpi.first.math.ComputerVisionUtil.objectToRobotPose()
       //In transform3d - Translation3d values: x+ = forward, y+ = left, z+ = up, Rotation3d is rotation around the transform3d axes
       // https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
-      // https://docs.wpilib.org/en/stable/_images/drive-yaw-pitch-roll.svg
+      // https://vis-ro.web.app/robotics/eulerangles
+      // https://www.chiefdelphi.com/t/photonvision-setup-specifically-the-robottocamera-transform/459246/2
       //Note: these values can be visualized in AdvantageScope if published over NetworkTables - https://github.com/Mechanical-Advantage/AdvantageScope/blob/main/docs/tabs/3D-FIELD.md
       //example - https://github.com/Mechanical-Advantage/RobotCode2024/blob/main/src/main/java/org/littletonrobotics/frc2024/subsystems/apriltagvision/AprilTagVisionConstants.java#L30
-      public static final Transform3d FRONT_LEFT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //front left - photonvision1
-      public static final Transform3d FRONT_RIGHT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //front right - photonvision2
-      public static final Transform3d BACK_RIGHT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //back right - photonvision1
-      public static final Transform3d BACK_LEFT = new Transform3d(0, 0 , 0, new Rotation3d(0, 0, 0));  //back left - photonvision2
+      //x+, y+, z+, (0, -degrees, 0).rotateBy(0, 0, 45 degrees)
+      public static final Transform3d FRONT_LEFT = new Transform3d(CAM_XY_FROM_CENTER_OF_ROBOT, CAM_XY_FROM_CENTER_OF_ROBOT, CAM_Z_FROM_FLOOR, 
+        new Rotation3d(0, CAM_PITCH_ANGLE, 0).rotateBy(new Rotation3d(0, 0, Units.degreesToRadians(45))));  //front left - photonvision1
+      //x+, y-, z+, (0, -degrees, 0).rotateBy(0, 0, -45 degrees)
+      public static final Transform3d FRONT_RIGHT = new Transform3d(CAM_XY_FROM_CENTER_OF_ROBOT, -CAM_XY_FROM_CENTER_OF_ROBOT, CAM_Z_FROM_FLOOR, 
+        new Rotation3d(0, CAM_PITCH_ANGLE, 0).rotateBy(new Rotation3d(0, 0, -Units.degreesToRadians(45))));  //front right - photonvision2
+      //x-, y-, z+, (0, -degrees, 0).rotateBy(0, 0, -135 degrees)
+      public static final Transform3d BACK_RIGHT = new Transform3d(-CAM_XY_FROM_CENTER_OF_ROBOT, -CAM_XY_FROM_CENTER_OF_ROBOT, CAM_Z_FROM_FLOOR, 
+        new Rotation3d(0, CAM_PITCH_ANGLE, 0).rotateBy(new Rotation3d(0, 0, -Units.degreesToRadians(135))));  //back right - photonvision1
+      //x-, y+, z+, (0, -degrees, 0).rotateBy(0, 0, 135 degrees)
+      public static final Transform3d BACK_LEFT = new Transform3d(-CAM_XY_FROM_CENTER_OF_ROBOT, CAM_XY_FROM_CENTER_OF_ROBOT, CAM_Z_FROM_FLOOR,
+        new Rotation3d(0, CAM_PITCH_ANGLE, 0).rotateBy(new Rotation3d(0, 0, Units.degreesToRadians(135))));  //back left - photonvision2
     }
   }
 

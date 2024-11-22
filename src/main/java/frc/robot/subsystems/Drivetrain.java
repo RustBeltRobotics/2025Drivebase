@@ -1,7 +1,6 @@
 package frc.robot.subsystems;
 
 import java.util.List;
-import java.util.Map;
 
 import org.photonvision.EstimatedRobotPose;
 
@@ -15,7 +14,6 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -32,7 +30,6 @@ import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.Constants.Vision;
 
 /**
 	- Contains majority of logic for driving the robot / controls the 4 SwerveModule instance (one for each wheel)
@@ -64,7 +61,6 @@ public class Drivetrain extends SubsystemBase {
     private ChassisSpeeds chassisSpeeds = new ChassisSpeeds(0.0, 0.0, 0.0);
 
     private boolean wheelsLockedX = false; // Boolean statement to control locking the wheels in an X-position
-    private boolean wheelsLockedSysId = false; // Boolean statement to control locking the wheels at 0 degrees for SysId characterization of drive motors
 
     private final SwerveDrivePoseEstimator poseEstimator;
 
@@ -230,7 +226,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     public void updateOdometry() {
-        // Update odometry from swerve states
+        // Update position estimate using odometry from swerve states
         poseEstimator.update(getGyroscopeRotation(), getSwerveModulePositions());
 
         if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
@@ -275,6 +271,7 @@ public class Drivetrain extends SubsystemBase {
         updateOdometry();
         updateTelemetry();
         //TODO: MJR - consider adding collision detection, eg. https://gist.githubusercontent.com/kauailabs/8c152fa14937b9cdf137/raw/900c99b23a1940e121ed1ae1abd589eb4050b5c1/CollisionDetection.java
+        //set a state flag indicating collision occured - reset pose using vision then clear the flag if true
     }
 
     //update state of swerve modules based on current chassis speeds
@@ -283,7 +280,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     private void handleLockedStates() {
-        if (!wheelsLockedX && !wheelsLockedSysId) {
+        if (!wheelsLockedX) {
             // If we are not in wheel's locked mode, update swerve modules with new states based on chassis speeds
             updateSwerveModules(swerveModuleStates);
         } else if (wheelsLockedX) {
@@ -295,12 +292,6 @@ public class Drivetrain extends SubsystemBase {
             frontRightModule.lockModule(-45);
             backLeftModule.lockModule(-45);
             backRightModule.lockModule(45);
-        } else if (wheelsLockedSysId) {
-            // lock wheels at 0 degrees (facing forward) to perform SysId characterization of drive motors
-            frontLeftModule.lockModule(0);
-            frontRightModule.lockModule(0);
-            backLeftModule.lockModule(0);
-            backRightModule.lockModule(0);
         }
     }
 
@@ -335,10 +326,6 @@ public class Drivetrain extends SubsystemBase {
 
     public void setVisionSystem(VisionSystem visionSystem) {
         this.visionSystem = visionSystem;
-    }
-
-    public void setWheelsLockedSysId(boolean wheelsLockedSysId) {
-        this.wheelsLockedSysId = wheelsLockedSysId;
     }
     
 }
