@@ -17,6 +17,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFieldLayout.OriginPosition;
 import edu.wpi.first.math.ComputerVisionUtil;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
@@ -30,6 +31,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import frc.robot.Constants;
 import frc.robot.vision.CameraPosition;
 import frc.robot.vision.VisionCamera;
+import frc.robot.vision.VisionPoseEstimationResult;
 
 //TODO: MJR review latest photonvision example for 2025 season and update logic below accordingly
 // https://github.com/PhotonVision/photonvision/blob/master/photonlib-java-examples/poseest/src/main/java/frc/robot/Vision.java
@@ -50,8 +52,14 @@ public class VisionSystem {
         .getStructArrayTopic("/RBR/Vision/PoseEstimates/Accepted", Pose3d.struct).publish();
     private final StructArrayPublisher<Pose3d> rejectedVisionPosePublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("/RBR/Vision/PoseEstimates/Rejected", Pose3d.struct).publish();
-    private final StructPublisher<Pose3d> multiTagBestPostPublisher = NetworkTableInstance.getDefault()
-        .getStructTopic("/RBR/Vision/PoseEstimates/MultiTag/Best", Pose3d.struct).publish();
+    private final StructPublisher<Pose2d> frontLeftCameraPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("/RBR/Vision/PoseEstimates/Camera/FL", Pose2d.struct).publish();
+    private final StructPublisher<Pose2d> frontRightCameraPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("/RBR/Vision/PoseEstimates/Camera/FR", Pose2d.struct).publish();
+    private final StructPublisher<Pose2d> backLeftCameraPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("/RBR/Vision/PoseEstimates/Camera/BL", Pose2d.struct).publish();
+    private final StructPublisher<Pose2d> backRightCameraPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("/RBR/Vision/PoseEstimates/Camera/BR", Pose2d.struct).publish();
 
     //Links for troubleshooting / understanding:
     /*
@@ -99,9 +107,10 @@ public class VisionSystem {
     /**
      * Get position estimates of robot based on vision data (April Tag readings)
      * 
-     * @return List of EstimatedRobotPose - one per camera
+     * @return List of VisionPoseEstimationResult - one per camera that found a pose estimate
      */
-    public List<EstimatedRobotPose> getRobotPoseEstimation() {
+    public List<VisionPoseEstimationResult> getRobotPoseEstimationResults() {
+        List<VisionPoseEstimationResult> estimationResults = new ArrayList<>(visionCameras.size());
         List<EstimatedRobotPose> acceptedPoses = new ArrayList<>(visionCameras.size());
         List<EstimatedRobotPose> rejectedPoses = new ArrayList<>(visionCameras.size());
         List<Pose3d> usedAprilTags = new ArrayList<>();
@@ -111,7 +120,7 @@ public class VisionSystem {
             VisionCamera visionCamera = visionCameras.get(i);
             PhotonCamera photonCamera = visionCamera.getCameraInstance();
             PhotonPoseEstimator poseEstimator = visionCamera.getPoseEstimator();
-            //TODO: change this to getAllUnreadResults() once available in lib release, iterate over results 
+            //TODO: change this to getAllUnreadResults() once available in 2025 lib release, iterate over results 
             PhotonPipelineResult pipelineResult = photonCamera.getLatestResult();  
             List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
             List<Pose3d> rejectedAprilTagsForCamera = new ArrayList<>();
@@ -120,12 +129,14 @@ public class VisionSystem {
             //https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/multitag.html#enabling-multitag
             if (multiTagResult.estimatedPose.isPresent) {
                 Transform3d fieldToCamera = multiTagResult.estimatedPose.best;
-                //TODO: discard this result if bestReprojectionError is too high
+                //TODO: discard poseEstimateResult below if bestReprojectionError is too high
                 double bestReprojectionError = multiTagResult.estimatedPose.bestReprojErr;  //uom is pixels
                 //TODO: compare this with the EstimatedRobotPose result from below
                 Pose3d multiTagEstimatedRobotPose = new Pose3d(fieldToCamera.getX(), fieldToCamera.getY(), fieldToCamera.getZ(), fieldToCamera.getRotation());
             }
 
+            //TODO: verify this is non-empty when running the AprilTag pipeline and not object detection pipeline
+            //  This whole block may be unnecessary due to poseEstimator.update(pipelineResult) below already taking multitag logic into account
             if (pipelineResult.hasTargets()) {
                 int numAprilTagsSeen = pipelineResult.getTargets().size();
 
@@ -158,8 +169,10 @@ public class VisionSystem {
             Optional<EstimatedRobotPose> poseEstimateResult = poseEstimator.update(pipelineResult);
             if (poseEstimateResult.isPresent()) {
                 EstimatedRobotPose poseEstimate = poseEstimateResult.get();
+                double visionPoseTimestampSeconds = poseEstimate.timestampSeconds;
+                long networkTablesPoseTimestampMicroSeconds = Math.round(visionPoseTimestampSeconds * 1000000); //microseconds
                 Pose3d estimatedPose = poseEstimate.estimatedPose;
-                double poseTimestamp = poseEstimate.timestampSeconds;
+                Pose2d estimatedPose2d = estimatedPose.toPose2d();
 
                 if (!usedAprilTagsForCamera.isEmpty()) {
                     // Do not use pose if robot pose is off the field 
@@ -173,6 +186,17 @@ public class VisionSystem {
                     }
 
                     acceptedPoses.add(poseEstimate);
+                    estimationResults.add(new VisionPoseEstimationResult(visionCamera, poseEstimate));
+
+                    if (visionCamera.getCameraPosition() == CameraPosition.FRONT_LEFT) {
+                        frontLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                    } else if (visionCamera.getCameraPosition() == CameraPosition.FRONT_RIGHT) {
+                        frontRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                    } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_LEFT) {
+                        backLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                    } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_RIGHT) {
+                        backRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                    }
                 } else {
                     rejectedPoses.add(poseEstimate);
                 }
@@ -193,7 +217,7 @@ public class VisionSystem {
             rejectedVisionPosePublisher.accept(rejectedPoses.toArray(new Pose3d[0]));
         }
 
-        return acceptedPoses;
+        return estimationResults;
     }
 
     /*

@@ -16,11 +16,13 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
@@ -30,6 +32,7 @@ import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.vision.VisionPoseEstimationResult;
 
 /**
 	- Contains majority of logic for driving the robot / controls the 4 SwerveModule instance (one for each wheel)
@@ -62,6 +65,7 @@ public class Drivetrain extends SubsystemBase {
 
     private boolean wheelsLockedX = false; // Boolean statement to control locking the wheels in an X-position
 
+    private final SwerveDriveOdometry swerveOdometry;
     private final SwerveDrivePoseEstimator poseEstimator;
 
     private SwerveModuleState[] swerveModuleStates = { new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState() };
@@ -79,7 +83,9 @@ public class Drivetrain extends SubsystemBase {
     StructArrayPublisher<SwerveModuleState> swerveStatePublisherSetpoint = NetworkTableInstance.getDefault().getStructArrayTopic("/RBR/SwerveStates/Setpoint", SwerveModuleState.struct).publish();
 
     // networktables publisher for advantagescope 2d pose visualization
-    StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault().getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
+    StructPublisher<Pose2d> poseEstimatePublisher = NetworkTableInstance.getDefault().getStructTopic("/RBR/PoseEstimated", Pose2d.struct).publish();
+    StructPublisher<Pose2d> poseSwerveOdometryPublisher = NetworkTableInstance.getDefault().getStructTopic("/RBR/PoseSwerveOdometry", Pose2d.struct).publish();
+
     // networktables publisher for advantagescope chassis speed visualization
     // StructPublisher<ChassisSpeeds> chassisSpeedPublisherMeasured = NetworkTableInstance.getDefault().getStructTopic("/RBR/ChassisSpeed/Measured", ChassisSpeeds.struct).publish();
     //Navx velicity data is too inaccurate to make this useful
@@ -93,17 +99,15 @@ public class Drivetrain extends SubsystemBase {
     public Drivetrain() {
         // Configure AutoBuilder last
         AutoBuilder.configureHolonomic(
-                this::getPose, // Robot pose supplier
+                this::getEstimatedPose, // Robot pose supplier
                 this::resetPose, // Method to reset odometry (will be called if your auto has a starting pose)
                 this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
                 this::drive, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-                new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your
-                                                 // Constants class
+                new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
                         new PIDConstants(Constants.PathPlanner.translation_P, Constants.PathPlanner.translation_I, Constants.PathPlanner.translation_D), // Translation PID constants
                         new PIDConstants(Constants.PathPlanner.rotation_P, Constants.PathPlanner.rotation_I, Constants.PathPlanner.rotation_D), // Rotation PID constants
                         Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND, // Max module speed, in m/s
-                        Constants.Kinematics.DRIVETRAIN_BASE_RADIUS, // Drive base radius in meters. Distance from robot center to
-                                                          // furthest module.
+                        Constants.Kinematics.DRIVETRAIN_BASE_RADIUS, // Drive base radius in meters. Distance from robot center to furthest module.
                         new ReplanningConfig()),
                 () -> {
                     // Boolean supplier that controls when the path will be mirrored for the red
@@ -150,27 +154,32 @@ public class Drivetrain extends SubsystemBase {
         // Initialize and zero gyro
         navx = new AHRS(SPI.Port.kMXP);
 
+        Pose2d initialRobotPose = new Pose2d();
+        Rotation2d initialRobotRotation = getGyroscopeRotation();
+        SwerveModulePosition[] initialModulePositions = getSwerveModulePositions();
+        swerveOdometry = new SwerveDriveOdometry(Constants.Kinematics.SWERVE_KINEMATICS, initialRobotRotation, initialModulePositions, initialRobotPose);
+
         // Create the poseEstimator with vectors to weight our vision measurements
         //See this post on how to tune the std deviation values: https://www.chiefdelphi.com/t/how-do-i-understand-standard-deviation-in-the-poseestimator-class/411492/10
         poseEstimator = new SwerveDrivePoseEstimator(
                 Constants.Kinematics.SWERVE_KINEMATICS,
-                getGyroscopeRotation(), getSwerveModulePositions(), new Pose2d(),
+                initialRobotRotation, initialModulePositions, initialRobotPose,
                 VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5)),
                 VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(30)));
         
-        zeroGyroscope();
+        zeroPoseEstimatorAngle();
     }
 
     /**
-     * Sets the gyroscope angle to zero. This can be used to set the direction the
+     * Sets the poseEstimators position angle to zero. This can be used to set the direction the
      * robot is currently facing to the 'forwards' direction.
      */
-    public void zeroGyroscope() {
+    public void zeroPoseEstimatorAngle() {
         poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), new Pose2d(poseEstimator.getEstimatedPosition().getTranslation(), new Rotation2d(0)));
     }
 
-    public Command zeroGyroscopeCommand() {
-        return runOnce(() -> zeroGyroscope());
+    public Command zeroPoseEstimatorAngleCommand() {
+        return runOnce(() -> zeroPoseEstimatorAngle());
     }
 
     /**
@@ -222,26 +231,37 @@ public class Drivetrain extends SubsystemBase {
     }
 
     public Rotation2d getPoseRotation() {
+        //this should always match 'actual' robot angle since the gyro is our source of truth
         return poseEstimator.getEstimatedPosition().getRotation();
     }
 
     public void updateOdometry() {
+        Rotation2d currentRobotRotation = getGyroscopeRotation();
+        SwerveModulePosition[] currentModulePositions = getSwerveModulePositions();
+        swerveOdometry.update(currentRobotRotation, currentModulePositions);
+
         // Update position estimate using odometry from swerve states
-        poseEstimator.update(getGyroscopeRotation(), getSwerveModulePositions());
+        poseEstimator.update(currentRobotRotation, currentModulePositions);
 
         if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
-            List<EstimatedRobotPose> visionPoseEstimates = visionSystem.getRobotPoseEstimation();
+            List<VisionPoseEstimationResult> visionPoseEstimationResults = visionSystem.getRobotPoseEstimationResults();
             //TODO: review cases where we get multiple valid estimates back to determine if we should apply further filtering here to drop potential bad results
-            for (EstimatedRobotPose visionPoseEstimate : visionPoseEstimates) {
+            for (VisionPoseEstimationResult visionPoseEstimationResult : visionPoseEstimationResults) {
+                EstimatedRobotPose visionPoseEstimate = visionPoseEstimationResult.getEstimatedRobotPose();
+                Pose2d estimatedRobotPoseFromVision = visionPoseEstimate.estimatedPose.toPose2d();
                 //TODO: define this method / test and/or use a constant here for the standard deviation
                 // poseEstimator.setVisionMeasurementStdDevs(visionSystem.getVisionMeasurementStandardDeviation(visionPoseEstimate));
-                poseEstimator.addVisionMeasurement(visionPoseEstimate.estimatedPose.toPose2d(), visionPoseEstimate.timestampSeconds);
+                poseEstimator.addVisionMeasurement(estimatedRobotPoseFromVision, visionPoseEstimate.timestampSeconds);
             }
         }
     }
 
-    public Pose2d getPose() {
+    public Pose2d getEstimatedPose() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public Pose2d getSwerveOdometryPose() {
+        return swerveOdometry.getPoseMeters();
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -305,13 +325,15 @@ public class Drivetrain extends SubsystemBase {
     }
 
     private void updateTelemetry() {
-        Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
+        Pose2d estimatedPosition = getEstimatedPose();
+        Pose2d swerveOdometryPosition = getSwerveOdometryPose();
         double currentRobotAngle = estimatedPosition.getRotation().getDegrees();
         // Publish gyro angle to shuffleboard
         gyroEntry.setDouble(currentRobotAngle);
 
         // Advantage scope things
-        posePublisher.set(estimatedPosition);
+        poseEstimatePublisher.set(estimatedPosition);
+        poseSwerveOdometryPublisher.set(swerveOdometryPosition);
         chassisSpeedPublisherSetpoint.set(chassisSpeeds);
 
         swerveStatePublisherMeasured.set(new SwerveModuleState[] { frontLeftModule.getState(), frontRightModule.getState(),
