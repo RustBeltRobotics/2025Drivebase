@@ -96,12 +96,12 @@ public class VisionSystem {
             if (isDisconnected) {
                 System.out.println("Warning: " + c.getCameraPosition() + " Camera (" + c.getCameraName() + ") disconnected!");
                 //TODO: publish alert warnings if not connected
+            } else {
+                c.getCameraInstance().setPipelineIndex(Constants.Vision.APRIL_TAG_PIPELINE_INDEX);
             }
 
             return isDisconnected;
         });
-        
-        //TODO: set pipeline index explicitly for all cameras for AprilTag processing
     }
  
     /**

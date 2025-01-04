@@ -6,9 +6,7 @@ package frc.robot;
 
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
-import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -17,7 +15,6 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.Unit;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 
 /**
@@ -98,7 +95,7 @@ public final class Constants {
     public static final double NEO_REVOLUTION_PER_MINUTE = 5676.0;
 
     /* Robot mass in Kg. */
-    public static final double MASS = Units.lbsToKilograms(145.0); //TODO: update
+    public static final double MASS = Units.lbsToKilograms(51.0); //Note: this weight includes the battery (but no bumpers yet)
 
     /* Robot frame width in meters */
     public static final double WIDTH = Units.inchesToMeters(28.125);
@@ -196,6 +193,7 @@ public final class Constants {
 
   public static final class Vision {
     public static final boolean VISION_ENABLED = true;
+    public static final int APRIL_TAG_PIPELINE_INDEX = 0;
     public static final String ARDUCAM_MODEL = "OV9281";
     public static final double POSE_AMBIGUITY_CUTOFF = 0.05;  //TODO: test and adjust this value if necessary (photon docs suggest using 0.2)
     public static final double POSE_AMBIGUITY_SHIFTER = 0.2;
