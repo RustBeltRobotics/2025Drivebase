@@ -120,86 +120,10 @@ public class VisionSystem {
             VisionCamera visionCamera = visionCameras.get(i);
             PhotonCamera photonCamera = visionCamera.getCameraInstance();
             PhotonPoseEstimator poseEstimator = visionCamera.getPoseEstimator();
-            //TODO: change this to getAllUnreadResults() once available in 2025 lib release, iterate over results 
-            PhotonPipelineResult pipelineResult = photonCamera.getLatestResult();  
-            List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
-            List<Pose3d> rejectedAprilTagsForCamera = new ArrayList<>();
-            MultiTargetPNPResult multiTagResult = pipelineResult.getMultiTagResult();
 
-            //https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/multitag.html#enabling-multitag
-            if (multiTagResult.estimatedPose.isPresent) {
-                Transform3d fieldToCamera = multiTagResult.estimatedPose.best;
-                //TODO: discard poseEstimateResult below if bestReprojectionError is too high
-                double bestReprojectionError = multiTagResult.estimatedPose.bestReprojErr;  //uom is pixels
-                //TODO: compare this with the EstimatedRobotPose result from below
-                Pose3d multiTagEstimatedRobotPose = new Pose3d(fieldToCamera.getX(), fieldToCamera.getY(), fieldToCamera.getZ(), fieldToCamera.getRotation());
-            }
-
-            //TODO: verify this is non-empty when running the AprilTag pipeline and not object detection pipeline
-            //  This whole block may be unnecessary due to poseEstimator.update(pipelineResult) below already taking multitag logic into account
-            if (pipelineResult.hasTargets()) {
-                int numAprilTagsSeen = pipelineResult.getTargets().size();
-
-                for (PhotonTrackedTarget target : pipelineResult.getTargets()) {
-                    //poseAmbiguity is between 0 and 1 (0 being no ambiguity, and 1 meaning both have the same reprojection error). Numbers above 0.2 are likely to be ambiguous. -1 if invalid.
-                    double poseAmbiguity = target.getPoseAmbiguity();
-                    boolean isUnambiguous = poseAmbiguity < Constants.Vision.POSE_AMBIGUITY_CUTOFF && poseAmbiguity >= 0;
-                    boolean isCloseEnough = target.getBestCameraToTarget().getTranslation().getNorm() < Constants.Vision.DISTANCE_CUTOFF;
-                    boolean shouldUseTarget = (isUnambiguous || numAprilTagsSeen > 1) && isCloseEnough;
-                    Optional<Pose3d> targetPose = fieldLayout.getTagPose(target.getFiducialId());
-                    if (targetPose.isPresent()) {
-                        Pose3d tagPose = targetPose.get();
-
-                        if (shouldUseTarget) {
-                            usedAprilTagsForCamera.add(tagPose);
-                        } else {
-                            rejectedAprilTagsForCamera.add(tagPose);
-                        }
-                    }
-                }
-
-                if (!usedAprilTagsForCamera.isEmpty()) {
-                    usedAprilTags.addAll(usedAprilTagsForCamera);
-                }
-                if (!rejectedAprilTagsForCamera.isEmpty()) {
-                    rejectedAprilTags.addAll(rejectedAprilTagsForCamera);
-                }
-            }
-
-            Optional<EstimatedRobotPose> poseEstimateResult = poseEstimator.update(pipelineResult);
-            if (poseEstimateResult.isPresent()) {
-                EstimatedRobotPose poseEstimate = poseEstimateResult.get();
-                double visionPoseTimestampSeconds = poseEstimate.timestampSeconds;
-                long networkTablesPoseTimestampMicroSeconds = Math.round(visionPoseTimestampSeconds * 1000000); //microseconds
-                Pose3d estimatedPose = poseEstimate.estimatedPose;
-                Pose2d estimatedPose2d = estimatedPose.toPose2d();
-
-                if (!usedAprilTagsForCamera.isEmpty()) {
-                    // Do not use pose if robot pose is off the field 
-                    // TODO: compare Z values if we care about them in 2025 game
-                    if (estimatedPose.getX() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
-                        || estimatedPose.getX() > Constants.Game.FIELD_LENGTH_METERS + Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
-                        || estimatedPose.getY() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
-                        || estimatedPose.getY() > Constants.Game.FIELD_WIDTH_METERS + Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS) {
-                            rejectedPoses.add(poseEstimate);
-                            continue;
-                    }
-
-                    acceptedPoses.add(poseEstimate);
-                    estimationResults.add(new VisionPoseEstimationResult(visionCamera, poseEstimate));
-
-                    if (visionCamera.getCameraPosition() == CameraPosition.FRONT_LEFT) {
-                        frontLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
-                    } else if (visionCamera.getCameraPosition() == CameraPosition.FRONT_RIGHT) {
-                        frontRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
-                    } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_LEFT) {
-                        backLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
-                    } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_RIGHT) {
-                        backRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
-                    }
-                } else {
-                    rejectedPoses.add(poseEstimate);
-                }
+            for (PhotonPipelineResult pipelineResult : photonCamera.getAllUnreadResults()) {
+                processPhotonPipelineResult(pipelineResult, estimationResults, acceptedPoses, rejectedPoses, usedAprilTags,
+                    rejectedAprilTags, visionCamera, poseEstimator);
             }
         }
 
@@ -218,6 +142,91 @@ public class VisionSystem {
         }
 
         return estimationResults;
+    }
+
+    private void processPhotonPipelineResult(PhotonPipelineResult pipelineResult, List<VisionPoseEstimationResult> estimationResults, 
+            List<EstimatedRobotPose> acceptedPoses, List<EstimatedRobotPose> rejectedPoses, 
+            List<Pose3d> usedAprilTags, List<Pose3d> rejectedAprilTags, VisionCamera visionCamera, PhotonPoseEstimator poseEstimator) {
+        List<Pose3d> usedAprilTagsForCamera = new ArrayList<>();
+        List<Pose3d> rejectedAprilTagsForCamera = new ArrayList<>();
+        Optional<MultiTargetPNPResult> multiTagResult = pipelineResult.getMultiTagResult();
+
+        //https://docs.photonvision.org/en/latest/docs/apriltag-pipelines/multitag.html#enabling-multitag
+        if (multiTagResult.isPresent()) {
+            MultiTargetPNPResult mtr = multiTagResult.get();
+            Transform3d fieldToCamera = mtr.estimatedPose.best;
+            //TODO: discard poseEstimateResult below if bestReprojectionError is too high
+            double bestReprojectionError = mtr.estimatedPose.bestReprojErr;  //uom is pixels
+            //TODO: compare this with the EstimatedRobotPose result from below
+            Pose3d multiTagEstimatedRobotPose = new Pose3d(fieldToCamera.getX(), fieldToCamera.getY(), fieldToCamera.getZ(), fieldToCamera.getRotation());
+        }
+
+        //TODO: verify this is non-empty when running the AprilTag pipeline and not object detection pipeline
+        //  This whole block may be unnecessary due to poseEstimator.update(pipelineResult) below already taking multitag logic into account
+        if (pipelineResult.hasTargets()) {
+            int numAprilTagsSeen = pipelineResult.getTargets().size();
+
+            for (PhotonTrackedTarget target : pipelineResult.getTargets()) {
+                //poseAmbiguity is between 0 and 1 (0 being no ambiguity, and 1 meaning both have the same reprojection error). Numbers above 0.2 are likely to be ambiguous. -1 if invalid.
+                double poseAmbiguity = target.getPoseAmbiguity();
+                boolean isUnambiguous = poseAmbiguity < Constants.Vision.POSE_AMBIGUITY_CUTOFF && poseAmbiguity >= 0;
+                boolean isCloseEnough = target.getBestCameraToTarget().getTranslation().getNorm() < Constants.Vision.DISTANCE_CUTOFF;
+                boolean shouldUseTarget = (isUnambiguous || numAprilTagsSeen > 1) && isCloseEnough;
+                Optional<Pose3d> targetPose = fieldLayout.getTagPose(target.getFiducialId());
+                if (targetPose.isPresent()) {
+                    Pose3d tagPose = targetPose.get();
+
+                    if (shouldUseTarget) {
+                        usedAprilTagsForCamera.add(tagPose);
+                    } else {
+                        rejectedAprilTagsForCamera.add(tagPose);
+                    }
+                }
+            }
+
+            if (!usedAprilTagsForCamera.isEmpty()) {
+                usedAprilTags.addAll(usedAprilTagsForCamera);
+            }
+            if (!rejectedAprilTagsForCamera.isEmpty()) {
+                rejectedAprilTags.addAll(rejectedAprilTagsForCamera);
+            }
+        }
+
+        Optional<EstimatedRobotPose> poseEstimateResult = poseEstimator.update(pipelineResult);
+        if (poseEstimateResult.isPresent()) {
+            EstimatedRobotPose poseEstimate = poseEstimateResult.get();
+            double visionPoseTimestampSeconds = poseEstimate.timestampSeconds;
+            long networkTablesPoseTimestampMicroSeconds = Math.round(visionPoseTimestampSeconds * 1000000); //microseconds
+            Pose3d estimatedPose = poseEstimate.estimatedPose;
+            Pose2d estimatedPose2d = estimatedPose.toPose2d();
+
+            if (!usedAprilTagsForCamera.isEmpty()) {
+                // Do not use pose if robot pose is off the field 
+                // TODO: compare Z values if we care about them in 2025 game
+                if (estimatedPose.getX() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
+                    || estimatedPose.getX() > Constants.Game.FIELD_LENGTH_METERS + Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
+                    || estimatedPose.getY() < -Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS
+                    || estimatedPose.getY() > Constants.Game.FIELD_WIDTH_METERS + Constants.Game.FIELD_POSE_XY_ERROR_MARGIN_METERS) {
+                        rejectedPoses.add(poseEstimate);
+                        return;
+                }
+
+                acceptedPoses.add(poseEstimate);
+                estimationResults.add(new VisionPoseEstimationResult(visionCamera, poseEstimate));
+
+                if (visionCamera.getCameraPosition() == CameraPosition.FRONT_LEFT) {
+                    frontLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                } else if (visionCamera.getCameraPosition() == CameraPosition.FRONT_RIGHT) {
+                    frontRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_LEFT) {
+                    backLeftCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                } else if (visionCamera.getCameraPosition() == CameraPosition.BACK_RIGHT) {
+                    backRightCameraPosePublisher.set(estimatedPose2d, networkTablesPoseTimestampMicroSeconds);
+                }
+            } else {
+                rejectedPoses.add(poseEstimate);
+            }
+        }
     }
 
     /*

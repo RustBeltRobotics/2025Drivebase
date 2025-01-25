@@ -1,20 +1,24 @@
 package frc.sysid;
 
-import static edu.wpi.first.units.MutableMeasure.mutable;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
 
-import com.revrobotics.CANSparkMax;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.CANSparkBase.IdleMode;
-import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 
-import edu.wpi.first.units.Distance;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.measure.MutDistance;
+import edu.wpi.first.units.measure.MutLinearVelocity;
+import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.units.MutableMeasure;
-import edu.wpi.first.units.Velocity;
-import edu.wpi.first.units.Voltage;
+import edu.wpi.first.units.measure.Velocity;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -25,77 +29,46 @@ import frc.robot.Constants;
  */
 public class SysIdDrivetrain extends SubsystemBase {
     
-    private final CANSparkMax frontLeftDriveMotor;
+    private final SparkMax frontLeftDriveMotor;
     private final RelativeEncoder frontLeftDriveEncoder;
-    private final CANSparkMax frontRightDriveMotor;
+    private final SparkMax frontRightDriveMotor;
     private final RelativeEncoder frontRightDriveEncoder;
-    private final CANSparkMax backRightDriveMotor;
+    private final SparkMax backRightDriveMotor;
     private final RelativeEncoder backRightDriveEncoder;
-    private final CANSparkMax backLeftDriveMotor;
+    private final SparkMax backLeftDriveMotor;
     private final RelativeEncoder backLeftDriveEncoder;
     
     // Mutable holder for unit-safe voltage values, persisted to avoid reallocation.
-    private final MutableMeasure<Voltage> m_appliedVoltage = mutable(Volts.of(0));
+    private final MutVoltage m_appliedVoltage = Volts.mutable(0);
     // Mutable holder for unit-safe linear distance values, persisted to avoid reallocation.
-    private final MutableMeasure<Distance> m_distance = mutable(Meters.of(0));
+    private final MutDistance m_distance = Meters.mutable(0);
     // Mutable holder for unit-safe linear velocity values, persisted to avoid reallocation.
-    private final MutableMeasure<Velocity<Distance>> m_velocity = mutable(MetersPerSecond.of(0));
+    private final MutLinearVelocity m_velocity = MetersPerSecond.mutable(0);
 
     private final SysIdRoutine m_sysIdRoutine;
 
     public SysIdDrivetrain() {
-        // Setup drive motor controller
-        frontLeftDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
-        frontLeftDriveMotor.restoreFactoryDefaults();
-        frontLeftDriveMotor.setIdleMode(IdleMode.kBrake);
-        frontLeftDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
-        frontLeftDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
-        frontLeftDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
+        // Setup drive motor controllers
+        SparkMaxConfig driveMotorSparkMaxConfig = new SparkMaxConfig();
+        driveMotorSparkMaxConfig.inverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED).idleMode(IdleMode.kBrake);
+        driveMotorSparkMaxConfig.smartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE).secondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
+        driveMotorSparkMaxConfig.encoder.positionConversionFactor(Constants.Kinematics.DRIVE_POSITION_CONVERSION).velocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
 
-        // Setup drive motor relative encoder
+        frontLeftDriveMotor = new SparkMax(Constants.CanID.SWERVE_MODULE_FRONT_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
+        frontLeftDriveMotor.configure(driveMotorSparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
         frontLeftDriveEncoder = frontLeftDriveMotor.getEncoder();
-        frontLeftDriveEncoder.setPositionConversionFactor(Constants.Kinematics.DRIVE_POSITION_CONVERSION);
-        frontLeftDriveEncoder.setVelocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
-        frontLeftDriveEncoder.setPosition(0.0);
 
-        frontRightDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
-        frontRightDriveMotor.restoreFactoryDefaults();
-        frontRightDriveMotor.setIdleMode(IdleMode.kBrake);
-        frontRightDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
-        frontRightDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
-        frontRightDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
-
+        frontRightDriveMotor = new SparkMax(Constants.CanID.SWERVE_MODULE_FRONT_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
+        frontRightDriveMotor.configure(driveMotorSparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
         frontRightDriveEncoder = frontRightDriveMotor.getEncoder();
-        frontRightDriveEncoder.setPositionConversionFactor(Constants.Kinematics.DRIVE_POSITION_CONVERSION);
-        frontRightDriveEncoder.setVelocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
-        frontRightDriveEncoder.setPosition(0.0);
 
-        backRightDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
-        backRightDriveMotor.restoreFactoryDefaults();
-        backRightDriveMotor.setIdleMode(IdleMode.kBrake);
-        backRightDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
-        backRightDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
-        backRightDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
-
+        backRightDriveMotor = new SparkMax(Constants.CanID.SWERVE_MODULE_BACK_RIGHT_DRIVE_MOTOR, MotorType.kBrushless);
+        backRightDriveMotor.configure(driveMotorSparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
         backRightDriveEncoder = backRightDriveMotor.getEncoder();
-        backRightDriveEncoder.setPositionConversionFactor(Constants.Kinematics.DRIVE_POSITION_CONVERSION);
-        backRightDriveEncoder.setVelocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
-        backRightDriveEncoder.setPosition(0.0);
 
-        backLeftDriveMotor = new CANSparkMax(Constants.CanID.SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
-        backLeftDriveMotor.restoreFactoryDefaults();
-        backLeftDriveMotor.setIdleMode(IdleMode.kBrake);
-        backLeftDriveMotor.setInverted(Constants.Kinematics.DRIVE_MOTOR_INVERTED);
-        backLeftDriveMotor.setSmartCurrentLimit(Constants.CurrentLimit.SparkMax.SMART_DRIVE);
-        backLeftDriveMotor.setSecondaryCurrentLimit(Constants.CurrentLimit.SparkMax.SECONDARY_DRIVE);
-
+        backLeftDriveMotor = new SparkMax(Constants.CanID.SWERVE_MODULE_BACK_LEFT_DRIVE_MOTOR, MotorType.kBrushless);
+        backLeftDriveMotor.configure(driveMotorSparkMaxConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
         backLeftDriveEncoder = backLeftDriveMotor.getEncoder();
-        backLeftDriveEncoder.setPositionConversionFactor(Constants.Kinematics.DRIVE_POSITION_CONVERSION);
-        backLeftDriveEncoder.setVelocityConversionFactor(Constants.Kinematics.DRIVE_VELOCITY_CONVERSION);
-        backLeftDriveEncoder.setPosition(0.0);
-
-        //TODO: MJR figure out why we get this error when loadfing data in sysid
-        // https://www.chiefdelphi.com/t/sysid-routine-not-properly-recording-motor-speed/455172
 
         // Create a new SysId routine for characterizing the drive.
         m_sysIdRoutine = new SysIdRoutine(
@@ -103,7 +76,7 @@ public class SysIdDrivetrain extends SubsystemBase {
             new SysIdRoutine.Config(),
             new SysIdRoutine.Mechanism(
                 // Tell SysId how to plumb the driving voltage to the motors.
-                (Measure<Voltage> volts) -> {
+                (Voltage volts) -> {
                     frontLeftDriveMotor.setVoltage(volts.in(Volts));
                     frontRightDriveMotor.setVoltage(volts.in(Volts));
                     backRightDriveMotor.setVoltage(volts.in(Volts));

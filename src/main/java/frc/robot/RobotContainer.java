@@ -13,11 +13,14 @@ import frc.robot.util.Utilities;
 import java.util.function.DoubleSupplier;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.revrobotics.spark.SparkMax;
 
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -42,13 +45,13 @@ public class RobotContainer {
   private final Drivetrain drivetrain = new Drivetrain();
   private final VisionSystem visionSystem;
 
-  private final SendableChooser<Command> autoChooser;
+  // private final SendableChooser<Command> autoChooser;
   private final SendableChooser<Integer> startingPosisitonChooser = new SendableChooser<>();
 
 
   /** The container for the robot. Contains subsystems, IO devices, and commands. */
   public RobotContainer() {
-    autoChooser = AutoBuilder.buildAutoChooser();
+    // autoChooser = AutoBuilder.buildAutoChooser();
 
     if (Constants.Vision.VISION_ENABLED) {
       visionSystem = new VisionSystem();
@@ -77,13 +80,41 @@ public class RobotContainer {
     // TODO: MJR
     
     // Pressing A button zeros the gyroscope
-    driverController.a().onTrue(drivetrain.zeroGyroscopeCommand());
+
+    //bumpers are on top of the controller, triggers on the bottom
+    driverController.rightBumper().onTrue(drivetrain.zeroPoseEstimatorAngleCommand());
+    driverController.leftBumper().onTrue(drivetrain.zeroPoseEstimatorAngleCommand());
+
+    //TODO: if these show no discernable drive motor movement, try with setReference(0.5, SparkMax.ControlType.kDutyCycle)
+    driverController.x().whileTrue(new StartEndCommand(
+        () -> drivetrain.getFrontLeftModule().getDrivePidController().setReference(2.0, SparkMax.ControlType.kVelocity),
+        () -> drivetrain.getFrontLeftModule().getDriveMotor().set(0.0)
+      )
+    );
+
+    driverController.y().whileTrue(new StartEndCommand(
+        () -> drivetrain.getFrontRightModule().getDrivePidController().setReference(2.0, SparkMax.ControlType.kVelocity),
+        () -> drivetrain.getFrontRightModule().getDriveMotor().set(0.0)
+      )
+    );
+
+    driverController.a().whileTrue(new StartEndCommand(
+        () -> drivetrain.getBackLeftModule().getDrivePidController().setReference(2.0, SparkMax.ControlType.kVelocity),
+        () -> drivetrain.getBackLeftModule().getDriveMotor().set(0.0)
+      )
+    );
+
+    driverController.b().whileTrue(new StartEndCommand(
+        () -> drivetrain.getBackRightModule().getDrivePidController().setReference(2.0, SparkMax.ControlType.kVelocity),
+        () -> drivetrain.getBackRightModule().getDriveMotor().set(0.0)
+      )
+    );
   }
 
   private void setDefaultCommands() {
-    DoubleSupplier translationXSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
-    DoubleSupplier translationYSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.05) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
-    DoubleSupplier rotationSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getRightX(), 1.0, 0.05) * Constants.Kinematics.MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND * MAX_SPEED_FACTOR;
+    DoubleSupplier translationXSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftY(), 1.0, 0.1) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
+    DoubleSupplier translationYSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getLeftX(), 1.0, 0.1) * Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND * MAX_SPEED_FACTOR;
+    DoubleSupplier rotationSupplier = () -> -Utilities.modifyAxisGeneric(driverController.getRightX(), 1.0, 0.1) * Constants.Kinematics.MAX_ANGULAR_VELOCITY_RADIANS_PER_SECOND * MAX_SPEED_FACTOR;
     
     drivetrain.setDefaultCommand(new FieldOrientedDriveCommand(drivetrain, translationXSupplier, translationYSupplier, rotationSupplier));
   }
@@ -94,15 +125,16 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return autoChooser.getSelected();
+    // return autoChooser.getSelected();
+    return null;
   }
 
   public void configureAutos() {
-    Constants.Shuffleboard.COMPETITION_TAB.add("auto machine", autoChooser).withPosition(0, 0).withSize(2, 1);
+    // Constants.Shuffleboard.COMPETITION_TAB.add("auto machine", autoChooser).withPosition(0, 0).withSize(2, 1);
 
-    startingPosisitonChooser.addOption("1", 1);
-    startingPosisitonChooser.addOption("2", 2);
-    startingPosisitonChooser.addOption("3", 3);
+    // startingPosisitonChooser.addOption("1", 1);
+    // startingPosisitonChooser.addOption("2", 2);
+    // startingPosisitonChooser.addOption("3", 3);
     Constants.Shuffleboard.COMPETITION_TAB.add("where am I?", startingPosisitonChooser).withPosition(2, 0);
   }
 

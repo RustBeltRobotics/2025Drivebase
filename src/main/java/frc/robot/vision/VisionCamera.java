@@ -20,7 +20,7 @@ public class VisionCamera {
         this.cameraPosition = cameraPosition;
         this.robotToCameraPose = robotToCameraPose;
         cameraInstance = new PhotonCamera(cameraName);
-        poseEstimator = new PhotonPoseEstimator(fieldLayout, poseStrategy, cameraInstance, robotToCameraPose);
+        poseEstimator = new PhotonPoseEstimator(fieldLayout, poseStrategy, robotToCameraPose);
     }
 
     public String getCameraName() {

@@ -4,11 +4,12 @@ import java.util.List;
 
 import org.photonvision.EstimatedRobotPose;
 
-import com.kauailabs.navx.frc.AHRS;
+import com.studica.frc.AHRS;
+
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
-import com.pathplanner.lib.util.PIDConstants;
-import com.pathplanner.lib.util.ReplanningConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
 
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -97,18 +98,28 @@ public class Drivetrain extends SubsystemBase {
     DoublePublisher backRightAbsoluteEncoderPublisher = NetworkTableInstance.getDefault().getDoubleTopic("/RBR/Swerve/Rotation/Absolute/BR").publish();
 
     public Drivetrain() {
+        /* 
+        RobotConfig ppRobotConfig = null;
+
+        try{
+            //TODO: Move this to Constants.PathPlanner once values are solidified
+            ppRobotConfig = RobotConfig.fromGUISettings();
+        } catch (Exception e) {
+            // Handle exception as needed
+            e.printStackTrace();
+        }
+
         // Configure AutoBuilder last
-        AutoBuilder.configureHolonomic(
+        AutoBuilder.configure(
                 this::getEstimatedPose, // Robot pose supplier
                 this::resetPose, // Method to reset odometry (will be called if your auto has a starting pose)
                 this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-                this::drive, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-                new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
+                (speeds, feedforwards) -> drive(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+                new PPHolonomicDriveController( // HolonomicPathFollowerConfig, this should likely live in your Constants class
                         new PIDConstants(Constants.PathPlanner.translation_P, Constants.PathPlanner.translation_I, Constants.PathPlanner.translation_D), // Translation PID constants
-                        new PIDConstants(Constants.PathPlanner.rotation_P, Constants.PathPlanner.rotation_I, Constants.PathPlanner.rotation_D), // Rotation PID constants
-                        Constants.Kinematics.MAX_SWERVE_MODULE_VELOCITY_METERS_PER_SECOND, // Max module speed, in m/s
-                        Constants.Kinematics.DRIVETRAIN_BASE_RADIUS, // Drive base radius in meters. Distance from robot center to furthest module.
-                        new ReplanningConfig()),
+                        new PIDConstants(Constants.PathPlanner.rotation_P, Constants.PathPlanner.rotation_I, Constants.PathPlanner.rotation_D) // Rotation PID constants
+                ),
+                ppRobotConfig,
                 () -> {
                     // Boolean supplier that controls when the path will be mirrored for the red
                     // alliance
@@ -123,6 +134,7 @@ public class Drivetrain extends SubsystemBase {
                 },
                 this // Reference to this subsystem to set requirements
         );
+*/
 
         // Initialize all modules
         backRightModule = new SwerveModule(
@@ -152,7 +164,7 @@ public class Drivetrain extends SubsystemBase {
         backRightModule.resetEncoders();
 
         // Initialize and zero gyro
-        navx = new AHRS(SPI.Port.kMXP);
+        navx = new AHRS(AHRS.NavXComType.kMXP_SPI);
 
         Pose2d initialRobotPose = new Pose2d();
         Rotation2d initialRobotRotation = getGyroscopeRotation();
@@ -223,8 +235,9 @@ public class Drivetrain extends SubsystemBase {
         //TODO: log this pose
         if (Constants.Vision.VISION_ENABLED && visionSystem != null) {
             //This will force initial robot pose using vision system - overriding the initial pose set by PathPlanner auto
-            visionSystem.getRobotPoseEstimation().stream().findFirst().ifPresent(visionPoseEstimate -> {
-                poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(), visionPoseEstimate.estimatedPose.toPose2d());
+            visionSystem.getRobotPoseEstimationResults().stream().findFirst().ifPresent(visionPoseEstimate -> {
+                poseEstimator.resetPosition(getGyroscopeRotation(), getSwerveModulePositions(),
+                    visionPoseEstimate.getEstimatedRobotPose().estimatedPose.toPose2d());
                 //TODO: log this pose
             });
         }
@@ -336,8 +349,9 @@ public class Drivetrain extends SubsystemBase {
         poseSwerveOdometryPublisher.set(swerveOdometryPosition);
         chassisSpeedPublisherSetpoint.set(chassisSpeeds);
 
-        swerveStatePublisherMeasured.set(new SwerveModuleState[] { frontLeftModule.getState(), frontRightModule.getState(),
-            backLeftModule.getState(), backRightModule.getState() });
+        //TODO: these values seem to exceed -180 degree to 180 degree range - try to fix (because Rotation2d is continuous)
+        swerveStatePublisherMeasured.set(new SwerveModuleState[] { frontLeftModule.getStateRotationConstrained(), frontRightModule.getStateRotationConstrained(),
+            backLeftModule.getStateRotationConstrained(), backRightModule.getStateRotationConstrained() });
         swerveStatePublisherSetpoint.set(swerveModuleStates);
 
         frontLeftAbsoluteEncoderPublisher.set(frontLeftModule.getAbsolutePosition());
@@ -348,6 +362,22 @@ public class Drivetrain extends SubsystemBase {
 
     public void setVisionSystem(VisionSystem visionSystem) {
         this.visionSystem = visionSystem;
+    }
+
+    public SwerveModule getFrontLeftModule() {
+        return frontLeftModule;
+    }
+
+    public SwerveModule getFrontRightModule() {
+        return frontRightModule;
+    }
+
+    public SwerveModule getBackLeftModule() {
+        return backLeftModule;
+    }
+
+    public SwerveModule getBackRightModule() {
+        return backRightModule;
     }
     
 }
